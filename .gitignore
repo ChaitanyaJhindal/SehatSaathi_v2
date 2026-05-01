@@ -1,0 +1,65 @@
+# 🔹 Python cache & compiled files
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# 🔹 Virtual environments
+
+venv/
+env/
+ENV/
+.venv/
+
+# 🔹 Environment variables (VERY IMPORTANT 🔒)
+
+.env
+
+# 🔹 Firebase / sensitive keys
+
+serviceAccountKey.json
+*.pem
+*.key
+
+# 🔹 Logs & temp files
+
+*.log
+*.tmp
+*.swp
+
+# 🔹 OS files
+
+.DS_Store
+Thumbs.db
+
+# 🔹 IDE / Editor folders
+
+.vscode/
+.idea/
+
+# 🔹 Jupyter Notebook checkpoints
+
+.ipynb_checkpoints/
+
+# 🔹 Build / distribution
+
+build/
+dist/
+*.egg-info/
+
+# 🔹 Testing
+
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# 🔹 Node (if using frontend)
+
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 🔹 Misc
+
+*.sqlite3
+*.db
