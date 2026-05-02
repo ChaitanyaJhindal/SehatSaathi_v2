@@ -28,8 +28,12 @@ def _supabase_request(
             "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be configured."
         )
 
-    encoded_query = parse.urlencode(query or {})
-    url = f"{supabase_url.rstrip('/')}/rest/v1/{path}"
+        base_url = supabase_url.rstrip("/")
+        if base_url.endswith("/rest/v1"):
+            base_url = base_url[: -len("/rest/v1")]
+
+        encoded_query = parse.urlencode(query or {})
+        url = f"{base_url}/rest/v1/{path}"
     if encoded_query:
         url = f"{url}?{encoded_query}"
 

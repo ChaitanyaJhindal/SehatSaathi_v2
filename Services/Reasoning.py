@@ -86,6 +86,8 @@ Transcript:
         report["age"] = patient_age
     if patient_gender is not None:
         report["gender"] = patient_gender
+
+    report["transcript"] = transcript
     report["transcript"] = transcript
 
     return report
