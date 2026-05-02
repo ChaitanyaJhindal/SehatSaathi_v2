@@ -5,7 +5,11 @@ from uuid import uuid4
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from Services.db_service import DatabaseConfigError, get_patient_details
+from Services.db_service import (
+    DatabaseConfigError,
+    create_report_record,
+    get_patient_details,
+)
 from Services.Reasoning import generate_clinical_report
 from Services.pdf_service import generate_pdf
 
@@ -60,6 +64,12 @@ async def create_report_pdf(
         _cleanup_files([audio_path])
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    report_id = str(uuid4())
+    report["id"] = report_id
+    report["report_id"] = report_id
+    report["patient_id"] = patient.get("id")
+    report["doctor_name"] = patient.get("doctor_name")
+
     pdf_name = f"clinical_report_{uuid4().hex}.pdf"
     pdf_path = os.path.join(temp_dir, pdf_name)
 
@@ -68,6 +78,12 @@ async def create_report_pdf(
     except Exception as exc:
         _cleanup_files([audio_path, pdf_path])
         raise HTTPException(status_code=500, detail="Failed to generate PDF.") from exc
+
+    try:
+        create_report_record(report, patient)
+    except Exception as exc:
+        _cleanup_files([audio_path, pdf_path])
+        raise HTTPException(status_code=500, detail=f"Failed to save report: {exc}") from exc
 
     background_tasks.add_task(_cleanup_files, [audio_path, pdf_path])
 
