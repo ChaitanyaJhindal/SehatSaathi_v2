@@ -18,25 +18,31 @@ def extract_json(text: str):
     match = re.search(r"\{.*\}", text, re.DOTALL)
     return match.group(0) if match else None
 
-def generate_clinical_report(file_path: str) -> dict:
+def generate_clinical_report(file_path: str, patient_context: dict | None = None) -> dict:
     # STEP 1: Get transcript from STT
     transcript = transcribe_audio(file_path)
 
     if not transcript:
         raise ValueError("Empty transcript from STT")
 
+    patient_context = patient_context or {}
+    patient_name = patient_context.get("name")
+    patient_age = patient_context.get("age")
+    patient_gender = patient_context.get("gender")
+
     # STEP 2: LLM prompt
     prompt = f"""
 You are a clinical medical assistant.
 
 Convert the following transcript into a structured medical report.
+Use patient demographic details from the database as the source of truth.
 
 Return ONLY valid JSON in this format:
 
 {{
-  "patient_name": null,
-  "age": null,
-  "gender": null,
+  "patient_name": {json.dumps(patient_name)},
+  "age": {json.dumps(patient_age)},
+  "gender": {json.dumps(patient_gender)},
   "symptoms": [],
   "diagnosis": null,
   "medications": [],
@@ -48,9 +54,13 @@ Return ONLY valid JSON in this format:
 Rules:
 - Output strictly JSON (no explanation)
 - Keep everything in English
-- If any field is missing, return null or empty list
+- Keep patient_name, age, and gender exactly aligned with the database context
+- If any non-demographic field is missing, return null or empty list
 - Do not hallucinate
 -igonre any kind conversation which does not pertain to the medical report or not relevant to report generation
+
+Database patient context:
+{json.dumps(patient_context, ensure_ascii=False)}
 
 Transcript:
 {transcript}
@@ -68,7 +78,16 @@ Transcript:
     if not json_text:
         raise ValueError("Invalid JSON from LLM")
 
-    return json.loads(json_text)
+    report = json.loads(json_text)
+
+    if patient_name is not None:
+        report["patient_name"] = patient_name
+    if patient_age is not None:
+        report["age"] = patient_age
+    if patient_gender is not None:
+        report["gender"] = patient_gender
+
+    return report
 
 
 # Optional: direct run test

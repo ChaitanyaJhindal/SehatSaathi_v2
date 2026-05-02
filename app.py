@@ -2,9 +2,10 @@ import os
 import tempfile
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
+from Services.db_service import DatabaseConfigError, get_patient_details
 from Services.Reasoning import generate_clinical_report
 from Services.pdf_service import generate_pdf
 
@@ -28,10 +29,20 @@ async def health_check():
 @app.post("/report/pdf")
 async def create_report_pdf(
     background_tasks: BackgroundTasks,
+    patient_id: str = Form(...),
     audio: UploadFile = File(...)
 ):
     if not audio.filename:
         raise HTTPException(status_code=400, detail="Audio file is required.")
+
+    try:
+        patient = get_patient_details(patient_id)
+    except DatabaseConfigError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to fetch patient details.") from exc
 
     suffix = os.path.splitext(audio.filename)[1] or ".wav"
     temp_dir = tempfile.gettempdir()
@@ -44,7 +55,7 @@ async def create_report_pdf(
         f.write(content)
 
     try:
-        report = generate_clinical_report(audio_path)
+        report = generate_clinical_report(audio_path, patient_context=patient)
     except Exception as exc:
         _cleanup_files([audio_path])
         raise HTTPException(status_code=500, detail=str(exc)) from exc

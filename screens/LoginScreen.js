@@ -1,0 +1,112 @@
+import React, { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+import InputField from "../components/InputField";
+import PrimaryButton from "../components/PrimaryButton";
+import ScreenContainer from "../components/ScreenContainer";
+import SectionCard from "../components/SectionCard";
+import { useAppContext } from "../context/AppContext";
+import { theme } from "../theme";
+
+export default function LoginScreen({ navigation }) {
+  const { login } = useAppContext();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleLogin = () => {
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both email and password.");
+      return;
+    }
+
+    login({
+      name: "Dr. Demo",
+      email: email.trim(),
+      specialization: "General Medicine",
+    });
+    navigation.replace("Dashboard");
+  };
+
+  return (
+    <ScreenContainer>
+      <View style={styles.hero}>
+        <Text style={styles.kicker}>Doctor Console</Text>
+        <Text style={styles.title}>Welcome back to SehatSaathi</Text>
+        <Text style={styles.subtitle}>
+          Sign in to record consultations, generate reports, and share PDFs in minutes.
+        </Text>
+      </View>
+
+      <SectionCard title="Login">
+        <InputField
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="doctor@hospital.com"
+          keyboardType="email-address"
+        />
+        <InputField
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Enter password"
+          secureTextEntry
+        />
+        {!!error && <Text style={styles.error}>{error}</Text>}
+        <PrimaryButton title="Login" onPress={handleLogin} />
+      </SectionCard>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>New to SehatSaathi?</Text>
+        <Pressable onPress={() => navigation.navigate("Signup")}>
+          <Text style={styles.footerLink}>Create account</Text>
+        </Pressable>
+      </View>
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  hero: {
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  kicker: {
+    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  title: {
+    color: theme.colors.text,
+    fontSize: 32,
+    fontWeight: "800",
+    lineHeight: 38,
+  },
+  subtitle: {
+    color: theme.colors.subtext,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  error: {
+    color: theme.colors.danger,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.lg,
+  },
+  footerText: {
+    color: theme.colors.subtext,
+  },
+  footerLink: {
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+});
