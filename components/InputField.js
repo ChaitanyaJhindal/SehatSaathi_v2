@@ -34,9 +34,11 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
   },
   label: {
-    color: theme.colors.text,
-    fontSize: 14,
+    color: theme.colors.subtext,
+    fontSize: 12,
     fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   input: {
     backgroundColor: theme.colors.surface,
@@ -46,6 +48,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 16,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: 15,
+    paddingVertical: 14,
   },
 });

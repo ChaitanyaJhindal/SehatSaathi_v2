@@ -15,10 +15,12 @@ export default function ScreenContainer({
       contentContainerStyle={[styles.scrollContent, contentStyle]}
       showsVerticalScrollIndicator={false}
     >
-      {children}
+      <View style={styles.contentShell}>{children}</View>
     </ScrollView>
   ) : (
-    <View style={[styles.staticContent, contentStyle]}>{children}</View>
+    <View style={[styles.staticContent, contentStyle]}>
+      <View style={styles.contentShell}>{children}</View>
+    </View>
   );
 
   return (
@@ -40,5 +42,11 @@ const styles = StyleSheet.create({
   staticContent: {
     flex: 1,
     padding: theme.spacing.lg,
+  },
+  contentShell: {
+    width: "100%",
+    maxWidth: 960,
+    alignSelf: "center",
+    gap: theme.spacing.lg,
   },
 });

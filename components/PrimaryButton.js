@@ -36,7 +36,7 @@ export default function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 54,
+    minHeight: 50,
     borderRadius: theme.radius.md,
     alignItems: "center",
     justifyContent: "center",
@@ -45,23 +45,24 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    borderColor: theme.colors.primaryDark,
   },
   secondaryButton: {
-    backgroundColor: theme.colors.secondary,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.borderStrong,
   },
   disabledButton: {
     opacity: 0.6,
   },
   label: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
   primaryLabel: {
     color: "#FFFFFF",
   },
   secondaryLabel: {
-    color: theme.colors.primary,
+    color: theme.colors.subtext,
   },
 });

@@ -94,14 +94,14 @@ export default function SignupScreen({ navigation }) {
 const styles = StyleSheet.create({
   hero: {
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xs,
   },
   kicker: {
     color: theme.colors.primary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   title: {
     color: theme.colors.text,
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
   },
   footerText: {
     color: theme.colors.subtext,

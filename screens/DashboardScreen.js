@@ -10,8 +10,13 @@ import { theme } from "../theme";
 function ActionCard({ title, subtitle, onPress }) {
   return (
     <Pressable onPress={onPress} style={styles.actionCard}>
-      <Text style={styles.actionTitle}>{title}</Text>
-      <Text style={styles.actionSubtitle}>{subtitle}</Text>
+      <View style={styles.actionBadge}>
+        <Text style={styles.actionBadgeText}>{title.slice(0, 1)}</Text>
+      </View>
+      <View style={styles.actionCopy}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -21,16 +26,31 @@ export default function DashboardScreen({ navigation }) {
 
   return (
     <ScreenContainer>
-      <View style={styles.header}>
-        <View style={styles.headerCopy}>
-          <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.name}>{user?.name || "Doctor"}</Text>
-          <Text style={styles.specialization}>{user?.specialization || "Healthcare Professional"}</Text>
+      <View style={styles.heroCard}>
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.greeting}>Clinical Workspace</Text>
+            <Text style={styles.name}>{user?.name || "Doctor"}</Text>
+            <Text style={styles.specialization}>{user?.specialization || "Healthcare Professional"}</Text>
+          </View>
+          <PrimaryButton title="Logout" variant="secondary" onPress={() => {
+            logout();
+            navigation.replace("Login");
+          }} />
         </View>
-        <PrimaryButton title="Logout" variant="secondary" onPress={() => {
-          logout();
-          navigation.replace("Login");
-        }} />
+
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Today</Text>
+            <Text style={styles.metricValue}>{reports.length}</Text>
+            <Text style={styles.metricHelp}>Reports generated</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Mode</Text>
+            <Text style={styles.metricValue}>Live</Text>
+            <Text style={styles.metricHelp}>Voice-first workflow</Text>
+          </View>
+        </View>
       </View>
 
       <SectionCard title="Start Consultation">
@@ -77,6 +97,19 @@ export default function DashboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  heroCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.lg,
+    shadowColor: "#000000",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -91,26 +124,74 @@ const styles = StyleSheet.create({
   greeting: {
     color: theme.colors.primary,
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   name: {
     color: theme.colors.text,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "800",
   },
   specialization: {
     color: theme.colors.subtext,
     fontSize: 15,
   },
-  actionCard: {
+  metricsRow: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+  },
+  metricCard: {
+    flex: 1,
     backgroundColor: theme.colors.surfaceMuted,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 4,
+  },
+  metricLabel: {
+    color: theme.colors.subtext,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  metricValue: {
+    color: theme.colors.text,
+    fontSize: 24,
+    fontWeight: "800",
+  },
+  metricHelp: {
+    color: theme.colors.subtext,
+    fontSize: 13,
+  },
+  actionCard: {
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
-    gap: theme.spacing.xs,
+    gap: theme.spacing.md,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  actionBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionBadgeText: {
+    color: theme.colors.primaryDark,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  actionCopy: {
+    flex: 1,
+    gap: theme.spacing.xxs,
   },
   actionTitle: {
     color: theme.colors.text,
@@ -131,7 +212,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.sm,
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,

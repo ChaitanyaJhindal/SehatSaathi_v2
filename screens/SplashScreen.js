@@ -17,10 +17,11 @@ export default function SplashScreen({ navigation }) {
     <ScreenContainer scroll={false}>
       <View style={styles.container}>
         <View style={styles.logoCard}>
-          <Text style={styles.logoGlyph}>S</Text>
+          <Text style={styles.logoGlyph}>+</Text>
         </View>
+        <Text style={styles.kicker}>Clinical Assistant</Text>
         <Text style={styles.title}>SehatSaathi</Text>
-        <Text style={styles.subtitle}>Voice-first clinical reporting for doctors</Text>
+        <Text style={styles.subtitle}>Voice-first consultation capture and reporting for doctors</Text>
         <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loader} />
       </View>
     </ScreenContainer>
@@ -35,25 +36,32 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   logoCard: {
-    width: 110,
-    height: 110,
-    borderRadius: 32,
+    width: 96,
+    height: 96,
+    borderRadius: 28,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: "#000000",
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
   logoGlyph: {
     color: "#FFFFFF",
-    fontSize: 52,
+    fontSize: 42,
     fontWeight: "800",
   },
+  kicker: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+  },
   title: {
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: "800",
     color: theme.colors.text,
   },
@@ -61,7 +69,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.subtext,
     textAlign: "center",
-    paddingHorizontal: theme.spacing.xl,
+    lineHeight: 24,
+    maxWidth: 280,
   },
   loader: {
     marginTop: theme.spacing.lg,

@@ -71,8 +71,15 @@ export default function ReportScreen({ route }) {
   return (
     <ScreenContainer>
       <SectionCard title="Summary">
-        <Text style={styles.summaryTitle}>{reportPayload?.filename || "Consultation Report"}</Text>
-        <Text style={styles.summaryMeta}>{reportPayload?.createdAt || "Generated just now"}</Text>
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryCopy}>
+            <Text style={styles.summaryTitle}>{reportPayload?.filename || "Consultation Report"}</Text>
+            <Text style={styles.summaryMeta}>{reportPayload?.createdAt || "Generated just now"}</Text>
+          </View>
+          <View style={styles.summaryStatus}>
+            <Text style={styles.summaryStatusText}>Ready</Text>
+          </View>
+        </View>
       </SectionCard>
 
       <SectionCard title="Symptoms">
@@ -117,6 +124,16 @@ export default function ReportScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing.md,
+  },
+  summaryCopy: {
+    flex: 1,
+    gap: 4,
+  },
   summaryTitle: {
     color: theme.colors.text,
     fontSize: 18,
@@ -125,6 +142,19 @@ const styles = StyleSheet.create({
   summaryMeta: {
     color: theme.colors.subtext,
     fontSize: 14,
+  },
+  summaryStatus: {
+    backgroundColor: theme.colors.secondary,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+  },
+  summaryStatusText: {
+    color: theme.colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   bodyText: {
     color: theme.colors.text,

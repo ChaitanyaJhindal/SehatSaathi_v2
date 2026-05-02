@@ -1,29 +1,35 @@
 export const theme = {
   colors: {
-    primary: "#1678F2",
-    primaryDark: "#0D5FCC",
-    secondary: "#E8F2FF",
-    background: "#F4F9FF",
+    primary: "#0056B3",
+    primaryDark: "#003F87",
+    secondary: "#D0E1FB",
+    background: "#F7F9FB",
     surface: "#FFFFFF",
-    surfaceMuted: "#F8FBFF",
-    text: "#17324D",
-    subtext: "#5B7591",
-    border: "#D7E5F5",
+    surfaceMuted: "#F2F4F6",
+    surfaceHigh: "#ECEEF0",
+    text: "#191C1E",
+    subtext: "#424752",
+    border: "#C2C6D4",
+    borderStrong: "#727784",
     success: "#1DAE6F",
-    danger: "#E05050",
-    shadow: "rgba(22, 120, 242, 0.12)"
+    danger: "#BA1A1A",
+    shadow: "rgba(0, 0, 0, 0.05)",
+    shadowStrong: "rgba(0, 0, 0, 0.08)"
   },
   spacing: {
+    xxs: 4,
     xs: 8,
     sm: 12,
     md: 16,
     lg: 24,
-    xl: 32
+    xl: 32,
+    xxl: 48
   },
   radius: {
-    sm: 12,
-    md: 18,
-    lg: 24,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 24,
     pill: 999
   }
 };

@@ -87,9 +87,9 @@ const styles = StyleSheet.create({
   fileLabel: {
     color: theme.colors.primary,
     fontWeight: "800",
-    fontSize: 13,
+    fontSize: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   fileName: {
     color: theme.colors.text,

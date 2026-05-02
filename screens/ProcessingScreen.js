@@ -56,6 +56,9 @@ export default function ProcessingScreen({ navigation, route }) {
           <View style={styles.loaderWrap}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
+          <View style={styles.progressLine}>
+            <View style={styles.progressFill} />
+          </View>
           <Text style={styles.title}>Generating report...</Text>
           <Text style={styles.subtitle}>
             We are uploading {sourceLabel}, transcribing the consultation, and preparing the PDF.
@@ -80,12 +83,25 @@ const styles = StyleSheet.create({
   loaderWrap: {
     width: 84,
     height: 84,
-    borderRadius: 28,
+    borderRadius: theme.radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     alignSelf: "center",
     marginBottom: theme.spacing.md,
+  },
+  progressLine: {
+    height: 8,
+    backgroundColor: theme.colors.surfaceHigh,
+    borderRadius: theme.radius.pill,
+    overflow: "hidden",
+  },
+  progressFill: {
+    width: "62%",
+    height: "100%",
+    backgroundColor: theme.colors.primary,
   },
   title: {
     color: theme.colors.text,

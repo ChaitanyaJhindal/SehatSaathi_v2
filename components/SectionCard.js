@@ -6,7 +6,9 @@ import { theme } from "../theme";
 export default function SectionCard({ title, children, subtle = false }) {
   return (
     <View style={[styles.card, subtle && styles.subtleCard]}>
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>{title}</Text>
+      </View>
       <View style={styles.content}>{children}</View>
     </View>
   );
@@ -16,25 +18,33 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowColor: "#000000",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+    overflow: "hidden",
   },
   subtleCard: {
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  header: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceMuted,
   },
   title: {
     color: theme.colors.text,
     fontSize: 17,
     fontWeight: "800",
-    marginBottom: theme.spacing.sm,
+    letterSpacing: 0.2,
   },
   content: {
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
+    padding: theme.spacing.lg,
   },
 });

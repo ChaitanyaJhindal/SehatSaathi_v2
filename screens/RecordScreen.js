@@ -101,6 +101,10 @@ export default function RecordScreen({ navigation }) {
           <Text style={styles.description}>
             Use the built-in recorder to capture a consultation and send it straight to the backend.
           </Text>
+          <View style={styles.signalRow}>
+            <View style={[styles.signalDot, isRecording && styles.signalDotActive]} />
+            <Text style={styles.signalText}>{isRecording ? "Recording in progress" : "Ready to capture audio"}</Text>
+          </View>
           <View style={styles.timerBubble}>
             <Text style={styles.timerLabel}>Recording time</Text>
             <Text style={styles.timerValue}>{formatDuration(elapsedSeconds)}</Text>
@@ -129,13 +133,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  signalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
+  },
+  signalDot: {
+    width: 10,
+    height: 10,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.borderStrong,
+  },
+  signalDotActive: {
+    backgroundColor: theme.colors.danger,
+  },
+  signalText: {
+    color: theme.colors.subtext,
+    fontSize: 13,
+    fontWeight: "600",
+  },
   timerBubble: {
     marginTop: theme.spacing.md,
     borderRadius: theme.radius.lg,
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.md,
     alignItems: "center",
-    backgroundColor: theme.colors.secondary,
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   timerLabel: {
     color: theme.colors.subtext,

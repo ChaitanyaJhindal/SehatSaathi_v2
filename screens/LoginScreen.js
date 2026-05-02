@@ -31,8 +31,15 @@ export default function LoginScreen({ navigation }) {
   return (
     <ScreenContainer>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Doctor Console</Text>
-        <Text style={styles.title}>Welcome back to SehatSaathi</Text>
+        <View style={styles.logoRow}>
+          <View style={styles.logoBadge}>
+            <Text style={styles.logoGlyph}>+</Text>
+          </View>
+          <View style={styles.logoCopy}>
+            <Text style={styles.kicker}>Doctor Console</Text>
+            <Text style={styles.title}>Welcome back to SehatSaathi</Text>
+          </View>
+        </View>
         <Text style={styles.subtitle}>
           Sign in to record consultations, generate reports, and share PDFs in minutes.
         </Text>
@@ -70,24 +77,46 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   hero: {
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.xs,
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  logoBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoGlyph: {
+    color: "#FFFFFF",
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  logoCopy: {
+    flex: 1,
+    gap: 4,
   },
   kicker: {
     color: theme.colors.primary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   title: {
     color: theme.colors.text,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "800",
-    lineHeight: 38,
+    lineHeight: 36,
   },
   subtitle: {
     color: theme.colors.subtext,
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 24,
   },
   error: {
@@ -100,7 +129,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
   },
   footerText: {
     color: theme.colors.subtext,
