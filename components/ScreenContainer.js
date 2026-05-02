@@ -19,7 +19,7 @@ export default function ScreenContainer({
     </ScrollView>
   ) : (
     <View style={[styles.staticContent, contentStyle]}>
-      <View style={styles.contentShell}>{children}</View>
+      <View style={[styles.contentShell, styles.staticShell]}>{children}</View>
     </View>
   );
 
@@ -48,5 +48,8 @@ const styles = StyleSheet.create({
     maxWidth: 960,
     alignSelf: "center",
     gap: theme.spacing.lg,
+  },
+  staticShell: {
+    flex: 1,
   },
 });
