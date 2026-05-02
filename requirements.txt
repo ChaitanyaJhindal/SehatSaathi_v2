@@ -2,3 +2,6 @@ fastapi==0.136.1
 groq==1.2.0
 python-dotenv==1.2.2
 sarvamai==0.1.28
+python-multipart==0.0.20
+reportlab==4.2.2
+uvicorn==0.34.2

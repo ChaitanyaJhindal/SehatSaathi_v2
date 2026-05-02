@@ -5,7 +5,10 @@ import json
 import re
 from dotenv import load_dotenv
 from groq import Groq
-from STT import transcribe_audio
+try:
+    from .STT import transcribe_audio
+except ImportError:
+    from STT import transcribe_audio
 
 load_dotenv()
 

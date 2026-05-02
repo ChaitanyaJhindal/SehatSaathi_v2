@@ -1,102 +1,67 @@
-# pdf_service.py
-
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.lib import colors
 import os
+import tempfile
+from uuid import uuid4
 
-# Fixed output directory
-OUTPUT_DIR = r"C:\Users\Chait\Downloads\Desktop\SehatSaathi_v2\Services\output"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+
+from Services.Reasoning import generate_clinical_report
+from Services.pdf_service import generate_pdf
+
+app = FastAPI(title="SehatSaathi API", version="1.0.0")
 
 
-def generate_pdf(report: dict, filename="clinical_report.pdf"):
-    file_path = os.path.join(OUTPUT_DIR, filename)
+def _cleanup_files(paths: list[str]) -> None:
+    for path in paths:
+        try:
+            if path and os.path.exists(path):
+                os.remove(path)
+        except OSError:
+            pass
 
-    styles = getSampleStyleSheet()
-    elements = []
 
-    # Header
-    elements.append(Paragraph("SehatSaathi Clinic", styles['Title']))
-    elements.append(Paragraph("Clinical Consultation Report", styles['Heading2']))
-    elements.append(Spacer(1, 20))
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
-    # Patient Info Table
-    patient_info = [
-        ["Patient Name", str(report.get("patient_name"))],
-        ["Age", str(report.get("age"))],
-        ["Gender", str(report.get("gender"))]
-    ]
 
-    table = Table(patient_info, colWidths=[2*inch, 4*inch])
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (0,-1), colors.lightgrey),
-        ("GRID", (0,0), (-1,-1), 1, colors.grey)
-    ]))
+@app.post("/report/pdf")
+async def create_report_pdf(
+    background_tasks: BackgroundTasks,
+    audio: UploadFile = File(...)
+):
+    if not audio.filename:
+        raise HTTPException(status_code=400, detail="Audio file is required.")
 
-    elements.append(Paragraph("Patient Information", styles['Heading3']))
-    elements.append(table)
-    elements.append(Spacer(1, 20))
+    suffix = os.path.splitext(audio.filename)[1] or ".wav"
+    temp_dir = tempfile.gettempdir()
+    audio_path = os.path.join(temp_dir, f"ss_audio_{uuid4().hex}{suffix}")
 
-    # Symptoms
-    elements.append(Paragraph("Symptoms", styles['Heading3']))
-    for s in report.get("symptoms", []):
-        elements.append(Paragraph(f"- {s}", styles['Normal']))
-    elements.append(Spacer(1, 15))
+    with open(audio_path, "wb") as f:
+        content = await audio.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Empty audio file.")
+        f.write(content)
 
-    # Diagnosis
-    elements.append(Paragraph("Diagnosis", styles['Heading3']))
-    elements.append(Paragraph(str(report.get("diagnosis")), styles['Normal']))
-    elements.append(Spacer(1, 15))
+    try:
+        report = generate_clinical_report(audio_path)
+    except Exception as exc:
+        _cleanup_files([audio_path])
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-    # Medications
-    elements.append(Paragraph("Medications", styles['Heading3']))
-    for m in report.get("medications", []):
-        elements.append(Paragraph(f"- {m}", styles['Normal']))
-    elements.append(Spacer(1, 15))
+    pdf_name = f"clinical_report_{uuid4().hex}.pdf"
+    pdf_path = os.path.join(temp_dir, pdf_name)
 
-    # Dosage
-    elements.append(Paragraph("Dosage", styles['Heading3']))
-    for d in report.get("dosage", []):
-        elements.append(Paragraph(f"- {d}", styles['Normal']))
-    elements.append(Spacer(1, 15))
+    try:
+        generate_pdf(report, pdf_path)
+    except Exception as exc:
+        _cleanup_files([audio_path, pdf_path])
+        raise HTTPException(status_code=500, detail="Failed to generate PDF.") from exc
 
-    # Precautions
-    elements.append(Paragraph("Precautions", styles['Heading3']))
-    for p in report.get("precautions", []):
-        elements.append(Paragraph(f"- {p}", styles['Normal']))
-    elements.append(Spacer(1, 15))
+    background_tasks.add_task(_cleanup_files, [audio_path, pdf_path])
 
-    # Doctor Notes
-    elements.append(Paragraph("Doctor Notes", styles['Heading3']))
-    elements.append(Paragraph(str(report.get("doctor_notes")), styles['Normal']))
-    elements.append(Spacer(1, 30))
-
-    # Signature
-    elements.append(Paragraph("Doctor Signature: ____________________", styles['Normal']))
-
-    # Build PDF
-    doc = SimpleDocTemplate(file_path)
-    doc.build(elements)
-
-    return file_path
-
-if __name__ == "__main__":
-    print("Running PDF test...")
-
-    sample = {
-        "patient_name": "Test Patient",
-        "age": 25,
-        "gender": "Male",
-        "symptoms": ["Fever", "Cough"],
-        "diagnosis": "Viral Infection",
-        "medications": ["Paracetamol"],
-        "dosage": ["500 mg twice daily"],
-        "precautions": ["Rest", "Hydration"],
-        "doctor_notes": "Follow up in 3 days"
-    }
-
-    path = generate_pdf(sample, "test_report.pdf")
-
-    print("PDF generated at:", path)
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename="clinical_report.pdf"
+    )
