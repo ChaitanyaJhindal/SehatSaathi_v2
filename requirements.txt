@@ -5,3 +5,5 @@ sarvamai==0.1.28
 python-multipart==0.0.20
 reportlab==4.2.2
 uvicorn==0.34.2
+pymongo==4.10.1
+dnspython==2.7.0

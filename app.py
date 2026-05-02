@@ -30,23 +30,23 @@ def _cleanup_files(paths: list[str]) -> None:
             pass
 
 
-    def _purge_expired_pdfs() -> None:
-        now = datetime.utcnow()
-        expired = [key for key, value in _PDF_CACHE.items()
-                   if now - datetime.fromisoformat(value["created_at"]) > _PDF_TTL]
-        for key in expired:
-            entry = _PDF_CACHE.pop(key, None)
-            if entry:
-                _cleanup_files([entry.get("path")])
+def _purge_expired_pdfs() -> None:
+    now = datetime.utcnow()
+    expired = [key for key, value in _PDF_CACHE.items()
+               if now - datetime.fromisoformat(value["created_at"]) > _PDF_TTL]
+    for key in expired:
+        entry = _PDF_CACHE.pop(key, None)
+        if entry:
+            _cleanup_files([entry.get("path")])
 
 
-    def _cache_pdf(path: str) -> str:
-        token = uuid4().hex
-        _PDF_CACHE[token] = {
-            "path": path,
-            "created_at": datetime.utcnow().isoformat(),
-        }
-        return token
+def _cache_pdf(path: str) -> str:
+    token = uuid4().hex
+    _PDF_CACHE[token] = {
+        "path": path,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    return token
 
 
 @app.get("/health")
