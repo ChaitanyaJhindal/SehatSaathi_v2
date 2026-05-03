@@ -19,7 +19,8 @@
       "edgeToEdgeEnabled": true
     },
     "plugins": [
-      "expo-document-picker"
+      "expo-document-picker",
+      "expo-asset"
     ]
   }
 }

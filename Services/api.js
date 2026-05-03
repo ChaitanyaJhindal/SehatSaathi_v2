@@ -1,5 +1,5 @@
 import axios from "axios";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 
 const API_BASE_URL = "https://sehatsaathi-v2.onrender.com";
 
