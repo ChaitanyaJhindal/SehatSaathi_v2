@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 
+import DebugLogPanel from "./components/DebugLogPanel";
 import { AppProvider } from "./context/AppContext";
 import SplashScreen from "./screens/SplashScreen";
 import LoginScreen from "./screens/LoginScreen";
@@ -53,6 +54,7 @@ export default function App() {
           <Stack.Screen name="Processing" component={ProcessingScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Report" component={ReportScreen} options={{ title: "Clinical Report" }} />
         </Stack.Navigator>
+        <DebugLogPanel />
       </NavigationContainer>
     </AppProvider>
   );

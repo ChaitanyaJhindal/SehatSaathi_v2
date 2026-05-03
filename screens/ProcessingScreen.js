@@ -8,7 +8,7 @@ import { extractErrorMessage, generateReport } from "../Services/api";
 import { theme } from "../theme";
 
 export default function ProcessingScreen({ navigation, route }) {
-  const { addReport } = useAppContext();
+  const { addReport, logError, logInfo } = useAppContext();
   const [error, setError] = useState("");
   const audioAsset = route.params?.audioAsset;
   const sourceLabel = route.params?.sourceLabel || "Consultation audio";
@@ -18,6 +18,7 @@ export default function ProcessingScreen({ navigation, route }) {
 
     const run = async () => {
       try {
+        logInfo("Started report generation", `${sourceLabel}: ${audioAsset?.name || audioAsset?.uri || "unknown file"}`);
         const payload = await generateReport(audioAsset);
 
         if (cancelled) {
@@ -34,10 +35,12 @@ export default function ProcessingScreen({ navigation, route }) {
         };
 
         addReport(reportPayload);
+        logInfo("Report generation completed", reportPayload.filename || "PDF and report ready");
         navigation.replace("Report", { reportPayload });
       } catch (uploadError) {
         if (!cancelled) {
           setError(extractErrorMessage(uploadError));
+          logError("Report generation failed", uploadError);
         }
       }
     };
@@ -47,7 +50,7 @@ export default function ProcessingScreen({ navigation, route }) {
     return () => {
       cancelled = true;
     };
-  }, [addReport, audioAsset, navigation]);
+  }, [addReport, audioAsset, logError, logInfo, navigation, sourceLabel]);
 
   return (
     <ScreenContainer scroll={false}>

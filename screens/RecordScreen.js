@@ -5,6 +5,7 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 function formatDuration(seconds) {
@@ -16,6 +17,7 @@ function formatDuration(seconds) {
 }
 
 export default function RecordScreen({ navigation }) {
+  const { logError, logInfo } = useAppContext();
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -47,6 +49,7 @@ export default function RecordScreen({ navigation }) {
       const permission = await Audio.requestPermissionsAsync();
 
       if (!permission.granted) {
+        logInfo("Microphone permission denied");
         Alert.alert("Microphone access needed", "Please allow microphone access to record audio.");
         return;
       }
@@ -64,7 +67,9 @@ export default function RecordScreen({ navigation }) {
       setElapsedSeconds(0);
       setIsRecording(true);
       startTimer();
+      logInfo("Audio recording started");
     } catch (error) {
+      logError("Recording start failed", error);
       Alert.alert("Recording failed", error.message || "Unable to start recording.");
     }
   };
@@ -80,6 +85,7 @@ export default function RecordScreen({ navigation }) {
 
       const uri = recording.getURI();
       setRecording(null);
+      logInfo("Audio recording completed", uri || "no URI returned");
 
       navigation.replace("Processing", {
         audioAsset: {
@@ -90,6 +96,7 @@ export default function RecordScreen({ navigation }) {
         sourceLabel: "Recorded audio",
       });
     } catch (error) {
+      logError("Recording stop failed", error);
       Alert.alert("Stop failed", error.message || "Unable to finish recording.");
     }
   };

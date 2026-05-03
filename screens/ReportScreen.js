@@ -6,6 +6,7 @@ import * as Sharing from "expo-sharing";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import { useAppContext } from "../context/AppContext";
 import { downloadPdfToCache } from "../Services/api";
 import { theme } from "../theme";
 
@@ -22,6 +23,7 @@ function BulletList({ items }) {
 }
 
 export default function ReportScreen({ route }) {
+  const { logError, logInfo } = useAppContext();
   const reportPayload = route.params?.reportPayload;
   const report = reportPayload?.report || {};
   const [sharing, setSharing] = useState(false);
@@ -35,10 +37,12 @@ export default function ReportScreen({ route }) {
     const canOpen = await Linking.canOpenURL(reportPayload.pdfUrl);
 
     if (!canOpen) {
+      logError("PDF open check failed", "Linking cannot open the generated PDF URL.");
       Alert.alert("Cannot open PDF", "This device cannot open the PDF URL.");
       return;
     }
 
+    logInfo("Opening PDF URL", reportPayload.pdfUrl);
     await Linking.openURL(reportPayload.pdfUrl);
   };
 
@@ -50,6 +54,7 @@ export default function ReportScreen({ route }) {
 
     try {
       setSharing(true);
+      logInfo("Started PDF share flow", reportPayload.pdfUrl);
       const localUri = await downloadPdfToCache(reportPayload.pdfUrl);
       const canShare = await Sharing.isAvailableAsync();
 
@@ -62,6 +67,7 @@ export default function ReportScreen({ route }) {
         });
       }
     } catch (error) {
+      logError("Share PDF failed", error);
       Alert.alert("Share failed", error.message || "Unable to share the PDF.");
     } finally {
       setSharing(false);

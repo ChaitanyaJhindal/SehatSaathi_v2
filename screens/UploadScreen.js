@@ -5,9 +5,11 @@ import * as DocumentPicker from "expo-document-picker";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function UploadScreen({ navigation }) {
+  const { logError, logInfo } = useAppContext();
   const [selectedFile, setSelectedFile] = useState(null);
 
   const handlePickFile = async () => {
@@ -18,11 +20,14 @@ export default function UploadScreen({ navigation }) {
       });
 
       if (result.canceled) {
+        logInfo("Document picker cancelled");
         return;
       }
 
       setSelectedFile(result.assets[0]);
+      logInfo("Audio file selected", result.assets[0]?.name || result.assets[0]?.uri || "unknown file");
     } catch (error) {
+      logError("Document picker failed", error);
       Alert.alert("Upload failed", error.message || "Unable to open the document picker.");
     }
   };
@@ -33,6 +38,7 @@ export default function UploadScreen({ navigation }) {
       return;
     }
 
+    logInfo("Navigating to processing screen", selectedFile.name || "uploaded audio");
     navigation.replace("Processing", {
       audioAsset: selectedFile,
       sourceLabel: selectedFile.name || "Uploaded audio",
