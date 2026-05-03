@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import * as Linking from "expo-linking";
 import * as Sharing from "expo-sharing";
 
@@ -22,11 +22,55 @@ function BulletList({ items }) {
   ));
 }
 
+function toEditableList(items) {
+  return Array.isArray(items) ? items.join("\n") : "";
+}
+
+function toListItems(value) {
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export default function ReportScreen({ route }) {
   const { logError, logInfo } = useAppContext();
   const reportPayload = route.params?.reportPayload;
   const report = reportPayload?.report || {};
   const [sharing, setSharing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editableReport, setEditableReport] = useState(() => ({
+    symptoms: toEditableList(report.symptoms),
+    diagnosis: report.diagnosis || "",
+    medications: toEditableList(report.medications),
+    dosage: toEditableList(report.dosage),
+    precautions: toEditableList(report.precautions),
+    doctor_notes: report.doctor_notes || "",
+  }));
+
+  const displayReport = {
+    symptoms: toListItems(editableReport.symptoms),
+    diagnosis: editableReport.diagnosis.trim(),
+    medications: toListItems(editableReport.medications),
+    dosage: toListItems(editableReport.dosage),
+    precautions: toListItems(editableReport.precautions),
+    doctor_notes: editableReport.doctor_notes.trim(),
+  };
+
+  const updateField = (field, value) => {
+    setEditableReport((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const toggleEditing = () => {
+    if (editing) {
+      logInfo("Clinical report edited manually");
+    }
+
+    setEditing((current) => !current);
+  };
 
   const handleViewPdf = async () => {
     if (!reportPayload?.pdfUrl) {
@@ -83,33 +127,112 @@ export default function ReportScreen({ route }) {
             <Text style={styles.summaryMeta}>{reportPayload?.createdAt || "Generated just now"}</Text>
           </View>
           <View style={styles.summaryStatus}>
-            <Text style={styles.summaryStatusText}>Ready</Text>
+            <Text style={styles.summaryStatusText}>{editing ? "Editing" : "Ready"}</Text>
           </View>
+        </View>
+        <View style={styles.summaryActions}>
+          <PrimaryButton
+            title={editing ? "Save Changes" : "Edit Report"}
+            variant="secondary"
+            onPress={toggleEditing}
+          />
         </View>
       </SectionCard>
 
       <SectionCard title="Symptoms">
-        <BulletList items={report.symptoms} />
+        {editing ? (
+          <TextInput
+            value={editableReport.symptoms}
+            onChangeText={(value) => updateField("symptoms", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter one symptom per line"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <BulletList items={displayReport.symptoms} />
+        )}
       </SectionCard>
 
       <SectionCard title="Diagnosis">
-        <Text style={styles.bodyText}>{report.diagnosis || "No diagnosis available."}</Text>
+        {editing ? (
+          <TextInput
+            value={editableReport.diagnosis}
+            onChangeText={(value) => updateField("diagnosis", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter diagnosis"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <Text style={styles.bodyText}>{displayReport.diagnosis || "No diagnosis available."}</Text>
+        )}
       </SectionCard>
 
       <SectionCard title="Medications">
-        <BulletList items={report.medications} />
+        {editing ? (
+          <TextInput
+            value={editableReport.medications}
+            onChangeText={(value) => updateField("medications", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter one medication per line"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <BulletList items={displayReport.medications} />
+        )}
       </SectionCard>
 
       <SectionCard title="Dosage">
-        <BulletList items={report.dosage} />
+        {editing ? (
+          <TextInput
+            value={editableReport.dosage}
+            onChangeText={(value) => updateField("dosage", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter one dosage instruction per line"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <BulletList items={displayReport.dosage} />
+        )}
       </SectionCard>
 
       <SectionCard title="Precautions">
-        <BulletList items={report.precautions} />
+        {editing ? (
+          <TextInput
+            value={editableReport.precautions}
+            onChangeText={(value) => updateField("precautions", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter one precaution per line"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <BulletList items={displayReport.precautions} />
+        )}
       </SectionCard>
 
       <SectionCard title="Doctor Notes">
-        <Text style={styles.bodyText}>{report.doctor_notes || "No doctor notes available."}</Text>
+        {editing ? (
+          <TextInput
+            value={editableReport.doctor_notes}
+            onChangeText={(value) => updateField("doctor_notes", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter doctor notes"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <Text style={styles.bodyText}>{displayReport.doctor_notes || "No doctor notes available."}</Text>
+        )}
       </SectionCard>
 
       <SectionCard title="Transcript" subtle>
@@ -162,10 +285,27 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
+  summaryActions: {
+    marginTop: theme.spacing.md,
+  },
   bodyText: {
     color: theme.colors.text,
     fontSize: 15,
     lineHeight: 23,
+  },
+  input: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 12,
+  },
+  multilineInput: {
+    minHeight: 110,
   },
   mutedText: {
     color: theme.colors.subtext,
