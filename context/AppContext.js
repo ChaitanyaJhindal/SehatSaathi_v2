@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const AppContext = createContext(null);
 const MAX_LOGS = 40;
@@ -20,15 +20,15 @@ export function AppProvider({ children }) {
   const [reports, setReports] = useState([]);
   const [logs, setLogs] = useState([]);
 
-  const login = (payload) => setUser(payload);
-  const logout = () => {
+  const login = useCallback((payload) => setUser(payload), []);
+  const logout = useCallback(() => {
     setUser(null);
     setReports([]);
-  };
-  const addReport = (reportEntry) => {
+  }, []);
+  const addReport = useCallback((reportEntry) => {
     setReports((current) => [reportEntry, ...current]);
-  };
-  const addLog = (level, message, details = "") => {
+  }, []);
+  const addLog = useCallback((level, message, details = "") => {
     const entry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       level,
@@ -38,16 +38,16 @@ export function AppProvider({ children }) {
     };
 
     setLogs((current) => [entry, ...current].slice(0, MAX_LOGS));
-  };
-  const logInfo = (message, details = "") => {
+  }, []);
+  const logInfo = useCallback((message, details = "") => {
     addLog("info", message, details);
-  };
-  const logError = (message, error) => {
+  }, [addLog]);
+  const logError = useCallback((message, error) => {
     addLog("error", message, serializeError(error));
-  };
-  const clearLogs = () => {
+  }, [addLog]);
+  const clearLogs = useCallback(() => {
     setLogs([]);
-  };
+  }, []);
 
   useEffect(() => {
     const errorUtils = global.ErrorUtils;
@@ -74,7 +74,7 @@ export function AppProvider({ children }) {
         errorUtils.setGlobalHandler(previousHandler);
       }
     };
-  }, []);
+  }, [addLog]);
 
   const value = useMemo(
     () => ({
@@ -89,7 +89,7 @@ export function AppProvider({ children }) {
       logError,
       clearLogs,
     }),
-    [user, reports, logs]
+    [user, reports, logs, login, logout, addReport, addLog, logInfo, logError, clearLogs]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

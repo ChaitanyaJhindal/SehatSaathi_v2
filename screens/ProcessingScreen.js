@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import ScreenContainer from "../components/ScreenContainer";
@@ -10,10 +10,16 @@ import { theme } from "../theme";
 export default function ProcessingScreen({ navigation, route }) {
   const { addReport, logError, logInfo } = useAppContext();
   const [error, setError] = useState("");
+  const hasStartedRef = useRef(false);
   const audioAsset = route.params?.audioAsset;
   const sourceLabel = route.params?.sourceLabel || "Consultation audio";
 
   useEffect(() => {
+    if (hasStartedRef.current) {
+      return undefined;
+    }
+
+    hasStartedRef.current = true;
     let cancelled = false;
 
     const run = async () => {
