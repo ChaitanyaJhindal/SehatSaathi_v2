@@ -5,6 +5,7 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import InputField from "../components/InputField";
 import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
@@ -21,6 +22,13 @@ export default function RecordScreen({ navigation }) {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [patientDetails, setPatientDetails] = useState({
+    name: "",
+    age: "",
+    gender: "",
+    phone: "",
+    notes: "",
+  });
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -44,7 +52,19 @@ export default function RecordScreen({ navigation }) {
     }
   };
 
+  const updatePatientField = (field, value) => {
+    setPatientDetails((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
   const handleStartRecording = async () => {
+    if (!patientDetails.name.trim()) {
+      Alert.alert("Patient name required", "Please add the patient name before recording.");
+      return;
+    }
+
     try {
       const permission = await Audio.requestPermissionsAsync();
 
@@ -93,6 +113,7 @@ export default function RecordScreen({ navigation }) {
           name: `consultation-${Date.now()}.m4a`,
           mimeType: "audio/m4a",
         },
+        patientDetails,
         sourceLabel: "Recorded audio",
       });
     } catch (error) {
@@ -102,12 +123,49 @@ export default function RecordScreen({ navigation }) {
   };
 
   return (
-    <ScreenContainer scroll={false}>
+    <ScreenContainer>
       <View style={styles.wrapper}>
         <SectionCard title="Live Consultation Capture">
           <Text style={styles.description}>
             Use the built-in recorder to capture a consultation and send it straight to the backend.
           </Text>
+          <View style={styles.formStack}>
+            <InputField
+              label="Patient Name"
+              value={patientDetails.name}
+              onChangeText={(value) => updatePatientField("name", value)}
+              placeholder="Rohan Verma"
+              autoCapitalize="words"
+            />
+            <InputField
+              label="Age"
+              value={patientDetails.age}
+              onChangeText={(value) => updatePatientField("age", value)}
+              placeholder="42"
+              keyboardType="number-pad"
+            />
+            <InputField
+              label="Gender"
+              value={patientDetails.gender}
+              onChangeText={(value) => updatePatientField("gender", value)}
+              placeholder="Male / Female / Other"
+              autoCapitalize="words"
+            />
+            <InputField
+              label="Phone"
+              value={patientDetails.phone}
+              onChangeText={(value) => updatePatientField("phone", value)}
+              placeholder="+91 98xxxxxx12"
+              keyboardType="phone-pad"
+            />
+            <InputField
+              label="Notes"
+              value={patientDetails.notes}
+              onChangeText={(value) => updatePatientField("notes", value)}
+              placeholder="Known diabetes, follow-up visit"
+              autoCapitalize="sentences"
+            />
+          </View>
           <View style={styles.signalRow}>
             <View style={[styles.signalDot, isRecording && styles.signalDotActive]} />
             <Text style={styles.signalText}>{isRecording ? "Recording in progress" : "Ready to capture audio"}</Text>
@@ -132,8 +190,7 @@ export default function RecordScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    flex: 1,
-    justifyContent: "center",
+    gap: theme.spacing.md,
   },
   description: {
     color: theme.colors.subtext,
@@ -145,6 +202,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: theme.spacing.xs,
     marginTop: theme.spacing.xs,
+  },
+  formStack: {
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   signalDot: {
     width: 10,

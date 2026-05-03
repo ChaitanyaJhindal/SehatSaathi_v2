@@ -8,10 +8,11 @@ import { extractErrorMessage, generateReport } from "../Services/api";
 import { theme } from "../theme";
 
 export default function ProcessingScreen({ navigation, route }) {
-  const { addReport, logError, logInfo } = useAppContext();
+  const { addReport, logError, logInfo, user } = useAppContext();
   const [error, setError] = useState("");
   const hasStartedRef = useRef(false);
   const audioAsset = route.params?.audioAsset;
+  const patientDetails = route.params?.patientDetails || {};
   const sourceLabel = route.params?.sourceLabel || "Consultation audio";
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function ProcessingScreen({ navigation, route }) {
     const run = async () => {
       try {
         logInfo("Started report generation", `${sourceLabel}: ${audioAsset?.name || audioAsset?.uri || "unknown file"}`);
-        const payload = await generateReport(audioAsset);
+        const payload = await generateReport(audioAsset, user, patientDetails);
 
         if (cancelled) {
           return;
@@ -37,6 +38,11 @@ export default function ProcessingScreen({ navigation, route }) {
           transcript: payload.transcript,
           report: payload.report,
           pdfUrl: payload.pdf_url,
+          patientId: payload.patient_id || payload.report?.patient_id,
+          patientName: payload.report?.patient_name || patientDetails.name,
+          patientAge: payload.report?.age || patientDetails.age,
+          patientGender: payload.report?.gender || patientDetails.gender,
+          patientPhone: payload.report?.patient_phone || patientDetails.phone,
           createdAt: new Date().toLocaleString(),
         };
 
@@ -56,7 +62,7 @@ export default function ProcessingScreen({ navigation, route }) {
     return () => {
       cancelled = true;
     };
-  }, [addReport, audioAsset, logError, logInfo, navigation, sourceLabel]);
+  }, [addReport, audioAsset, logError, logInfo, navigation, patientDetails, sourceLabel, user]);
 
   return (
     <ScreenContainer scroll={false}>

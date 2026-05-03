@@ -5,27 +5,40 @@ import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import { loginDoctor, extractErrorMessage } from "../Services/api";
 import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function LoginScreen({ navigation }) {
-  const { login } = useAppContext();
+  const { login, logError, logInfo } = useAppContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setError("Please enter both email and password.");
       return;
     }
 
-    login({
-      name: "Dr. Demo",
-      email: email.trim(),
-      specialization: "General Medicine",
-    });
-    navigation.replace("Dashboard");
+    try {
+      setLoading(true);
+      setError("");
+      const doctor = await loginDoctor({
+        email: email.trim(),
+        password,
+      });
+      login(doctor);
+      logInfo("Doctor login successful", doctor.email);
+      navigation.replace("Dashboard");
+    } catch (loginError) {
+      const message = extractErrorMessage(loginError);
+      setError(message);
+      logError("Doctor login failed", loginError);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,7 +74,7 @@ export default function LoginScreen({ navigation }) {
           secureTextEntry
         />
         {!!error && <Text style={styles.error}>{error}</Text>}
-        <PrimaryButton title="Login" onPress={handleLogin} />
+        <PrimaryButton title="Login" onPress={handleLogin} loading={loading} />
       </SectionCard>
 
       <View style={styles.footer}>

@@ -5,37 +5,56 @@ import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import { extractErrorMessage, signupDoctor } from "../Services/api";
 import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function SignupScreen({ navigation }) {
-  const { login } = useAppContext();
+  const { login, logError, logInfo } = useAppContext();
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     specialization: "",
+    organizationName: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const updateField = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
-  const handleSignup = () => {
-    const hasEmptyField = Object.values(form).some((value) => !value.trim());
+  const handleSignup = async () => {
+    const hasEmptyField = [form.name, form.email, form.password, form.specialization].some(
+      (value) => !value.trim()
+    );
 
     if (hasEmptyField) {
       setError("Please complete all signup fields.");
       return;
     }
 
-    login({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      specialization: form.specialization.trim(),
-    });
-    navigation.replace("Dashboard");
+    try {
+      setLoading(true);
+      setError("");
+      const doctor = await signupDoctor({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        specialization: form.specialization.trim(),
+        organization_name: form.organizationName.trim() || null,
+      });
+      login(doctor);
+      logInfo("Doctor account created", doctor.email);
+      navigation.replace("Dashboard");
+    } catch (signupError) {
+      const message = extractErrorMessage(signupError);
+      setError(message);
+      logError("Doctor signup failed", signupError);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,7 +63,7 @@ export default function SignupScreen({ navigation }) {
         <Text style={styles.kicker}>Create Account</Text>
         <Text style={styles.title}>Set up your doctor workspace</Text>
         <Text style={styles.subtitle}>
-          This demo uses local auth state so you can test the full report flow right away.
+          Create a doctor account to save patients, sign in securely, and generate reports with linked records.
         </Text>
       </View>
 
@@ -77,8 +96,15 @@ export default function SignupScreen({ navigation }) {
           placeholder="Cardiology"
           autoCapitalize="words"
         />
+        <InputField
+          label="Hospital / Clinic"
+          value={form.organizationName}
+          onChangeText={(value) => updateField("organizationName", value)}
+          placeholder="SehatSaathi Clinic"
+          autoCapitalize="words"
+        />
         {!!error && <Text style={styles.error}>{error}</Text>}
-        <PrimaryButton title="Create Account" onPress={handleSignup} />
+        <PrimaryButton title="Create Account" onPress={handleSignup} loading={loading} />
       </SectionCard>
 
       <View style={styles.footer}>

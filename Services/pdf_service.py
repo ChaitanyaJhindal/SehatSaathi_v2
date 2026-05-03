@@ -246,11 +246,22 @@ def _patient_details_table(report, styles):
         ],
         [
             Paragraph("Consulting Doctor", styles["label"]),
-            Paragraph("Patient ID", styles["label"]),
+            Paragraph("Patient ID / Phone", styles["label"]),
         ],
         [
             Paragraph(_stringify(report.get("doctor_name")), styles["value"]),
-            Paragraph(_stringify(report.get("patient_id")), styles["value"]),
+            Paragraph(
+                f"{_stringify(report.get('patient_id'))} / {_stringify(report.get('patient_phone'))}",
+                styles["value"],
+            ),
+        ],
+        [
+            Paragraph("Patient Notes", styles["label"]),
+            Paragraph("Report ID", styles["label"]),
+        ],
+        [
+            Paragraph(_stringify(report.get("patient_notes")), styles["value"]),
+            Paragraph(_stringify(report.get("report_id", report.get("id"))), styles["value"]),
         ],
     ]
     table = Table(patient_rows, colWidths=[78 * mm, 78 * mm])

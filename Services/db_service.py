@@ -1,4 +1,7 @@
 import os
+from datetime import datetime, timezone
+from hashlib import pbkdf2_hmac
+from secrets import token_hex
 from typing import Any
 
 from bson import ObjectId
@@ -65,8 +68,36 @@ def _normalize_doc(doc: dict) -> dict:
     return doc
 
 
+def _utcnow_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
+    salt = salt or token_hex(16)
+    password_hash = pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        120000,
+    ).hex()
+    return salt, password_hash
+
+
+def _public_doctor_profile(doctor: dict[str, Any]) -> dict[str, Any]:
+    doctor = _normalize_doc(doctor)
+    doctor.pop("password_hash", None)
+    doctor.pop("password_salt", None)
+    return {
+        "id": doctor.get("id"),
+        "name": doctor.get("name"),
+        "email": doctor.get("email"),
+        "specialization": doctor.get("specialization"),
+        "organization_name": doctor.get("organization_name"),
+    }
+
+
 # ---------------------------------------------------------------------------
-# Public API (same signatures as the old Supabase version)
+# Public API
 # ---------------------------------------------------------------------------
 
 def get_patient_details(patient_id: str) -> dict[str, Any]:
@@ -115,6 +146,110 @@ def get_patient_details(patient_id: str) -> dict[str, Any]:
     return patient
 
 
+def create_doctor_account(
+    name: str,
+    email: str,
+    password: str,
+    specialization: str | None = None,
+    organization_name: str | None = None,
+) -> dict[str, Any]:
+    db = _get_db()
+    normalized_email = email.strip().lower()
+
+    existing = db.doctors.find_one({"email": normalized_email})
+    if existing:
+        raise ValueError("An account with this email already exists.")
+
+    password_salt, password_hash = _hash_password(password)
+    payload = {
+        "name": name.strip(),
+        "email": normalized_email,
+        "specialization": specialization.strip() if specialization else None,
+        "organization_name": organization_name.strip() if organization_name else None,
+        "password_salt": password_salt,
+        "password_hash": password_hash,
+        "created_at": _utcnow_iso(),
+    }
+
+    result = db.doctors.insert_one(payload)
+    payload["_id"] = result.inserted_id
+    return _public_doctor_profile(payload)
+
+
+def authenticate_doctor(email: str, password: str) -> dict[str, Any]:
+    db = _get_db()
+    normalized_email = email.strip().lower()
+    doctor = db.doctors.find_one({"email": normalized_email})
+
+    if not doctor:
+        raise ValueError("No account found with this email.")
+
+    salt = doctor.get("password_salt")
+    expected_hash = doctor.get("password_hash")
+    _, password_hash = _hash_password(password, salt=salt)
+
+    if password_hash != expected_hash:
+        raise ValueError("Incorrect password.")
+
+    return _public_doctor_profile(doctor)
+
+
+def upsert_patient_record(
+    doctor_id: str | None,
+    patient_data: dict[str, Any],
+) -> dict[str, Any]:
+    db = _get_db()
+
+    patient_name = (patient_data.get("name") or "").strip()
+    if not patient_name:
+        return {}
+
+    phone = (patient_data.get("phone") or "").strip() or None
+    age_value = patient_data.get("age")
+    age = int(age_value) if age_value not in (None, "") else None
+    gender = (patient_data.get("gender") or "").strip() or None
+    notes = (patient_data.get("notes") or "").strip() or None
+
+    doctor_ref = _to_object_id(doctor_id) if doctor_id else None
+    lookup_query = {"doctor_id": doctor_ref, "name": patient_name}
+    if phone:
+        lookup_query["phone"] = phone
+
+    update_payload = {
+        "doctor_id": doctor_ref,
+        "name": patient_name,
+        "age": age,
+        "gender": gender,
+        "phone": phone,
+        "notes": notes,
+        "updated_at": _utcnow_iso(),
+    }
+
+    existing = db.patients.find_one(lookup_query)
+    if existing:
+        db.patients.update_one({"_id": existing["_id"]}, {"$set": update_payload})
+        existing.update(update_payload)
+        patient = _normalize_doc(existing)
+    else:
+        payload = {
+            **update_payload,
+            "created_at": _utcnow_iso(),
+        }
+        result = db.patients.insert_one(payload)
+        payload["_id"] = result.inserted_id
+        patient = _normalize_doc(payload)
+
+    if doctor_id:
+        doctor_ref = _to_object_id(doctor_id)
+        doctor = db.doctors.find_one({"_id": doctor_ref}) or db.doctors.find_one({"id": str(doctor_id)}) or {}
+        if doctor:
+            doctor = _public_doctor_profile(doctor)
+            patient["doctor_name"] = doctor.get("name")
+            patient["doctor"] = doctor
+
+    return patient
+
+
 def create_report_record(
     report: dict[str, Any],
     patient: dict[str, Any],
@@ -131,6 +266,11 @@ def create_report_record(
         "report_id": report.get("id"),
         "doctor_id": patient.get("doctor_id"),
         "patient_id": patient.get("id"),
+        "patient_name": patient.get("name") or report.get("patient_name"),
+        "patient_age": patient.get("age") if patient.get("age") is not None else report.get("age"),
+        "patient_gender": patient.get("gender") or report.get("gender"),
+        "patient_phone": patient.get("phone"),
+        "patient_notes": patient.get("notes"),
         "transcript": report.get("transcript"),
         "symptoms": report.get("symptoms", []),
         "diagnosis": report.get("diagnosis"),
@@ -139,6 +279,7 @@ def create_report_record(
         "precautions": report.get("precautions", []),
         "doctor_notes": report.get("doctor_notes"),
         "pdf_url": pdf_url,
+        "created_at": _utcnow_iso(),
     }
 
     result = db.reports.insert_one(payload)

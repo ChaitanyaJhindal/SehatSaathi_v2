@@ -5,12 +5,27 @@ import * as DocumentPicker from "expo-document-picker";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
+import InputField from "../components/InputField";
 import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function UploadScreen({ navigation }) {
   const { logError, logInfo } = useAppContext();
   const [selectedFile, setSelectedFile] = useState(null);
+  const [patientDetails, setPatientDetails] = useState({
+    name: "",
+    age: "",
+    gender: "",
+    phone: "",
+    notes: "",
+  });
+
+  const updatePatientField = (field, value) => {
+    setPatientDetails((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
 
   const handlePickFile = async () => {
     try {
@@ -38,20 +53,64 @@ export default function UploadScreen({ navigation }) {
       return;
     }
 
+    if (!patientDetails.name.trim()) {
+      Alert.alert("Patient name required", "Please add the patient name before generating the report.");
+      return;
+    }
+
     logInfo("Navigating to processing screen", selectedFile.name || "uploaded audio");
     navigation.replace("Processing", {
       audioAsset: selectedFile,
+      patientDetails,
       sourceLabel: selectedFile.name || "Uploaded audio",
     });
   };
 
   return (
-    <ScreenContainer scroll={false}>
+    <ScreenContainer>
       <View style={styles.wrapper}>
         <SectionCard title="Upload Existing Audio">
           <Text style={styles.description}>
             Pick a consultation file from your device. SehatSaathi will transcribe it and generate a report.
           </Text>
+
+          <View style={styles.formStack}>
+            <InputField
+              label="Patient Name"
+              value={patientDetails.name}
+              onChangeText={(value) => updatePatientField("name", value)}
+              placeholder="Rohan Verma"
+              autoCapitalize="words"
+            />
+            <InputField
+              label="Age"
+              value={patientDetails.age}
+              onChangeText={(value) => updatePatientField("age", value)}
+              placeholder="42"
+              keyboardType="number-pad"
+            />
+            <InputField
+              label="Gender"
+              value={patientDetails.gender}
+              onChangeText={(value) => updatePatientField("gender", value)}
+              placeholder="Male / Female / Other"
+              autoCapitalize="words"
+            />
+            <InputField
+              label="Phone"
+              value={patientDetails.phone}
+              onChangeText={(value) => updatePatientField("phone", value)}
+              placeholder="+91 98xxxxxx12"
+              keyboardType="phone-pad"
+            />
+            <InputField
+              label="Notes"
+              value={patientDetails.notes}
+              onChangeText={(value) => updatePatientField("notes", value)}
+              placeholder="Known diabetes, follow-up visit"
+              autoCapitalize="sentences"
+            />
+          </View>
 
           <View style={styles.fileCard}>
             <Text style={styles.fileLabel}>Selected File</Text>
@@ -73,13 +132,16 @@ export default function UploadScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    flex: 1,
-    justifyContent: "center",
+    gap: theme.spacing.md,
   },
   description: {
     color: theme.colors.subtext,
     fontSize: 15,
     lineHeight: 22,
+  },
+  formStack: {
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
   fileCard: {
     backgroundColor: theme.colors.surfaceMuted,

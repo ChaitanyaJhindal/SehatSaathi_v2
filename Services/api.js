@@ -16,10 +16,41 @@ function normalizeFile(asset) {
   };
 }
 
-export async function generateReport(asset) {
+export async function signupDoctor(payload) {
+  const response = await api.post("/auth/signup", payload);
+  return response.data;
+}
+
+export async function loginDoctor(payload) {
+  const response = await api.post("/auth/login", payload);
+  return response.data;
+}
+
+export async function generateReport(asset, user, patientDetails = {}) {
   const file = normalizeFile(asset);
   const formData = new FormData();
   formData.append("file", file);
+  if (user?.id) {
+    formData.append("doctor_id", user.id);
+  }
+  if (patientDetails.patientId) {
+    formData.append("patient_id", patientDetails.patientId);
+  }
+  if (patientDetails.name) {
+    formData.append("patient_name", patientDetails.name);
+  }
+  if (patientDetails.age) {
+    formData.append("patient_age", patientDetails.age);
+  }
+  if (patientDetails.gender) {
+    formData.append("patient_gender", patientDetails.gender);
+  }
+  if (patientDetails.phone) {
+    formData.append("patient_phone", patientDetails.phone);
+  }
+  if (patientDetails.notes) {
+    formData.append("patient_notes", patientDetails.notes);
+  }
 
   const response = await api.post("/generate-report", formData, {
     headers: {

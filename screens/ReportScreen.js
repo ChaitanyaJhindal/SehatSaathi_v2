@@ -125,6 +125,13 @@ export default function ReportScreen({ route }) {
           <View style={styles.summaryCopy}>
             <Text style={styles.summaryTitle}>{reportPayload?.filename || "Consultation Report"}</Text>
             <Text style={styles.summaryMeta}>{reportPayload?.createdAt || "Generated just now"}</Text>
+            <Text style={styles.summaryMeta}>
+              {reportPayload?.patientName || report.patient_name || "Unnamed patient"}
+              {" | "}
+              {reportPayload?.patientAge || report.age || "N/A"}
+              {" | "}
+              {reportPayload?.patientGender || report.gender || "N/A"}
+            </Text>
           </View>
           <View style={styles.summaryStatus}>
             <Text style={styles.summaryStatusText}>{editing ? "Editing" : "Ready"}</Text>
