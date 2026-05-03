@@ -61,11 +61,21 @@ def _to_object_id(id_str: str) -> ObjectId | str:
         return id_str
 
 
+def _serialize_value(value):
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _serialize_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_serialize_value(item) for item in value]
+    return value
+
+
 def _normalize_doc(doc: dict) -> dict:
     """Convert _id → id (string) so callers get a consistent 'id' field."""
     if doc and "_id" in doc:
         doc["id"] = str(doc.pop("_id"))
-    return doc
+    return _serialize_value(doc)
 
 
 def _utcnow_iso() -> str:
