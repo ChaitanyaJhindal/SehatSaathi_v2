@@ -35,20 +35,7 @@ def generate_clinical_report(file_path: str, patient_context: dict | None = None
 You are a clinical medical assistant.
 
 Extract medical information from the conversation.
-STRICT RULES (MUST FOLLOW):
 
-Extract ONLY information that is explicitly stated in the conversation.
-DO NOT infer, assume, or add any new medical information.
-DO NOT correct, reinterpret, or expand statements.
-If something is unclear, ambiguous, or contradictory → return null for that field.
-DO NOT guess missing dosage, duration, frequency, or diagnosis.
-Preserve original meaning exactly as spoken.
-If multiple conflicting values exist → include both OR return null (do not resolve conflict).
-DO NOT add medical knowledge from outside the conversation.
-DO NOT hallucinate body parts, symptoms, or conditions.
-If a medication is mentioned without dosage → include only the name.
-If dosage format is incomplete → copy exactly as given, do not fix it.
-Keep output strictly grounded in transcript text only.
 Return ONLY valid JSON.
 
 Fields:
