@@ -80,10 +80,19 @@ def build_pdf(final_data: dict, output_file="clinical_report.pdf"):
         ]
 
     def section_header(title):
-        t = Table([[Paragraph(title, styles["InfoLabel"])]], colWidths=[usable_w])
+        t = Table([[Paragraph(
+            title,
+            ParagraphStyle(
+                "SH",
+                fontName="Helvetica-Bold",
+                fontSize=10,
+                textColor=colors.white,
+                leading=14
+            )
+        )]], colWidths=[usable_w])
+
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), HEADER_BG),
-            ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
             ("LEFTPADDING", (0, 0), (-1, -1), 10),
             ("TOPPADDING", (0, 0), (-1, -1), 5),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
@@ -156,27 +165,56 @@ def build_pdf(final_data: dict, output_file="clinical_report.pdf"):
 
     # ---------- SYMPTOMS ----------
     elems.append(section_header("Symptoms"))
+    elems.append(Spacer(1, 6))
     symptoms = _items(final_data.get("symptoms"))
     for s in symptoms or ["No symptoms mentioned"]:
         elems.append(Paragraph(f"• {s}", styles["BulletItem"]))
     elems.append(Spacer(1, 10))
 
-    # ---------- MEDICATIONS ----------
+    # ---------- MEDICATIONS (TABLE) ----------
     elems.append(section_header("Medications"))
+    elems.append(Spacer(1, 6))
+
     medications = _items(final_data.get("medications"))
-    for m in medications or ["No medications"]:
-        elems.append(Paragraph(f"• {m}", styles["BulletItem"]))
+
+    if medications:
+        med_data = [[
+            Paragraph("#", styles["InfoLabel"]),
+            Paragraph("Medicine / Dosage", styles["InfoLabel"]),
+        ]]
+
+        for i, m in enumerate(medications, 1):
+            med_data.append([
+                Paragraph(str(i), styles["NormalSmall"]),
+                Paragraph(m, styles["NormalSmall"])
+            ])
+
+        mt = Table(med_data, colWidths=[1 * cm, usable_w - 1 * cm])
+
+        mt.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d0dce8")),
+            ("GRID", (0, 0), (-1, -1), 0.4, TABLE_BORDER),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1),
+             [colors.white, colors.HexColor("#f4f8fc")]),
+        ]))
+
+        elems.append(mt)
+    else:
+        elems.append(Paragraph("No medications prescribed.", styles["NormalSmall"]))
+
     elems.append(Spacer(1, 10))
 
     # ---------- PRECAUTIONS ----------
     elems.append(section_header("Precautions"))
+    elems.append(Spacer(1, 6))
     precautions = _items(final_data.get("precautions"))
     for p in precautions or ["No precautions"]:
         elems.append(Paragraph(f"• {p}", styles["BulletItem"]))
     elems.append(Spacer(1, 10))
 
-    # ---------- NOTES ----------
+    # ---------- DOCTOR NOTES ----------
     elems.append(section_header("Doctor Notes"))
+    elems.append(Spacer(1, 6))
     elems.append(Paragraph(_text(final_data.get("doctor_notes")), styles["NormalSmall"]))
 
     doc.build(elems)
