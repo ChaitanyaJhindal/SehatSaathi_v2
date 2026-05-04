@@ -32,43 +32,38 @@ def generate_clinical_report(file_path: str, patient_context: dict | None = None
 
     # STEP 2: LLM prompt
     prompt = f"""
-You are a clinical medical information extractor.
+You are a clinical medical assistant.
 
+Extract medical information from the conversation.
 STRICT RULES (MUST FOLLOW):
 
-1. Extract ONLY information that is explicitly stated in the conversation.
-2. DO NOT infer, assume, or add any new medical information.
-3. DO NOT correct, reinterpret, or expand statements.
-4. If something is unclear, ambiguous, or contradictory → return null for that field.
-5. DO NOT guess missing dosage, duration, frequency, or diagnosis.
-6. Preserve original meaning exactly as spoken.
-7. If multiple conflicting values exist → include both OR return null (do not resolve conflict).
-8. DO NOT add medical knowledge from outside the conversation.
-9. DO NOT hallucinate body parts, symptoms, or conditions.
-10. If a medication is mentioned without dosage → include only the name.
-11. If dosage format is incomplete → copy exactly as given, do not fix it.
-12. Keep output strictly grounded in transcript text only.
-
-OUTPUT RULES:
-
-* Return ONLY valid JSON.
-* No explanations, no comments.
-* Use null for missing fields.
-* Do not rephrase medical terms unnecessarily.
-* Maintain original wording where possible.
+Extract ONLY information that is explicitly stated in the conversation.
+DO NOT infer, assume, or add any new medical information.
+DO NOT correct, reinterpret, or expand statements.
+If something is unclear, ambiguous, or contradictory → return null for that field.
+DO NOT guess missing dosage, duration, frequency, or diagnosis.
+Preserve original meaning exactly as spoken.
+If multiple conflicting values exist → include both OR return null (do not resolve conflict).
+DO NOT add medical knowledge from outside the conversation.
+DO NOT hallucinate body parts, symptoms, or conditions.
+If a medication is mentioned without dosage → include only the name.
+If dosage format is incomplete → copy exactly as given, do not fix it.
+Keep output strictly grounded in transcript text only.
+Return ONLY valid JSON.
 
 Fields:
-symptoms        (list of exact phrases from transcript)
-diagnosis       (string, only if explicitly stated)
-medications     (list of strings, exactly as mentioned)
-dosage          (string, only if explicitly described)
-precautions     (list of exact instructions from transcript)
-follow_up       (string, only if clearly mentioned)
-doctor_notes    (string, only if explicitly spoken or clearly stated)
+symptoms        (list of strings)
+diagnosis       (string)
+medications     (list of strings, each as "MedicineName - Dosage")
+dosage          (string, general dosage notes if any)
+precautions     (list of strings)
+follow_up       (string, follow-up instructions or date if mentioned)
+doctor_notes    (string)
+
+If information is missing return null.
 
 Conversation:
 {transcript}
-
 """
 
     response = groq_client.chat.completions.create(
