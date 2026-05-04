@@ -47,11 +47,11 @@ def _get_client() -> Client:
     return Client(account_sid, auth_token)
 
 
-def send_report_whatsapp_message(report: dict[str, Any], pdf_url: str = "") -> dict[str, str]:
+def send_report_whatsapp_message(report: dict[str, Any], pdf_url: str) -> dict[str, str]:
     if not is_whatsapp_enabled():
         raise WhatsAppConfigError("WhatsApp not configured.")
 
-    # 🔥 Always send to your sandbox number
+    # Always send to your sandbox number
     phone_number = "+918769140658"
 
     from_number = os.getenv("TWILIO_WHATSAPP_FROM")
@@ -60,12 +60,9 @@ def send_report_whatsapp_message(report: dict[str, Any], pdf_url: str = "") -> d
     payload = {
         "from_": _format_whatsapp_number(from_number),
         "to": _format_whatsapp_number(phone_number),
-
-        # 🔥 ONLY TEXT MESSAGE (NO PDF)
         "body": (
-            f"Hi {patient_name} 👋\n\n"
-            f"This is a test message from SehatSaathi.\n\n"
-            f"Lorem ipsum dolor sit amet 🚀"
+            f"Hello {patient_name}, your SehatSaathi report is ready.\n"
+            f"Download here:\n{pdf_url}"
         ),
     }
 
