@@ -34,35 +34,22 @@ def generate_clinical_report(file_path: str, patient_context: dict | None = None
     prompt = f"""
 You are a clinical medical assistant.
 
-Convert the following transcript into a structured medical report.
-Use patient demographic details from the database as the source of truth.
+Extract medical information from the conversation.
 
-Return ONLY valid JSON in this format:
+Return ONLY valid JSON.
 
-{{
-  "patient_name": {json.dumps(patient_name)},
-  "age": {json.dumps(patient_age)},
-  "gender": {json.dumps(patient_gender)},
-  "symptoms": [],
-  "diagnosis": null,
-  "medications": [],
-  "dosage": [],
-  "precautions": [],
-  "doctor_notes": null
-}}
+Fields:
+symptoms        (list of strings)
+diagnosis       (string)
+medications     (list of strings, each as "MedicineName - Dosage")
+dosage          (string, general dosage notes if any)
+precautions     (list of strings)
+follow_up       (string, follow-up instructions or date if mentioned)
+doctor_notes    (string)
 
-Rules:
-- Output strictly JSON (no explanation)
-- Keep everything in English
-- Keep patient_name, age, and gender exactly aligned with the database context
-- If any non-demographic field is missing, return null or empty list
-- Do not hallucinate
--igonre any kind conversation which does not pertain to the medical report or not relevant to report generation
+If information is missing return null.
 
-Database patient context:
-{json.dumps(patient_context, ensure_ascii=False)}
-
-Transcript:
+Conversation:
 {transcript}
 """
 
