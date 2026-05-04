@@ -16,11 +16,17 @@
       "supportsTablet": true
     },
     "android": {
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.chaitanyajhindal.sehatsaathi"
     },
     "plugins": [
       "expo-document-picker",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f219e8b9-d175-41bd-8c53-9b6a998aad10"
+      }
+    }
   }
 }

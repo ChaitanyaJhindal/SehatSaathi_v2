@@ -75,6 +75,11 @@ export async function downloadPdfToCache(pdfUrl) {
   return downloadResult.uri;
 }
 
+export async function sendReportOnWhatsApp(reportId) {
+  const response = await api.post(`/reports/${reportId}/send-whatsapp`);
+  return response.data;
+}
+
 export function extractErrorMessage(error) {
   if (error?.response?.data?.detail) {
     return error.response.data.detail;

@@ -273,7 +273,7 @@ def create_report_record(
     db = _get_db()
 
     payload = {
-        "report_id": report.get("id"),
+        "report_id": report.get("report_id") or report.get("id"),
         "doctor_id": patient.get("doctor_id"),
         "patient_id": patient.get("id"),
         "patient_name": patient.get("name") or report.get("patient_name"),
@@ -295,3 +295,18 @@ def create_report_record(
     result = db.reports.insert_one(payload)
     payload["id"] = str(result.inserted_id)
     return payload
+
+
+def get_report_record(report_id: str) -> dict[str, Any]:
+    db = _get_db()
+
+    report = db.reports.find_one({"report_id": report_id})
+
+    if report is None:
+        query_id = _to_object_id(report_id)
+        report = db.reports.find_one({"_id": query_id})
+
+    if not report:
+        raise ValueError("Report not found.")
+
+    return _normalize_doc(report)

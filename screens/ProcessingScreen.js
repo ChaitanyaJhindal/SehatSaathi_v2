@@ -38,6 +38,8 @@ export default function ProcessingScreen({ navigation, route }) {
           transcript: payload.transcript,
           report: payload.report,
           pdfUrl: payload.pdf_url,
+          reportId: payload.report_id || payload.report?.report_id,
+          reportRecordId: payload.report_record_id,
           patientId: payload.patient_id || payload.report?.patient_id,
           patientName: payload.report?.patient_name || patientDetails.name,
           patientAge: payload.report?.age || patientDetails.age,

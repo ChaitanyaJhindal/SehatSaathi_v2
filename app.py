@@ -3,7 +3,7 @@ import tempfile
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, EmailStr
 
@@ -13,10 +13,16 @@ from Services.db_service import (
     create_doctor_account,
     create_report_record,
     get_patient_details,
+    get_report_record,
     upsert_patient_record,
 )
 from Services.Reasoning import generate_clinical_report
 from Services.pdf_service import generate_pdf
+from Services.whatsapp_service import (
+    WhatsAppConfigError,
+    is_whatsapp_enabled,
+    send_report_whatsapp_message,
+)
 
 app = FastAPI(title="SehatSaathi API", version="1.0.0")
 
@@ -64,6 +70,14 @@ def _cache_pdf(path: str) -> str:
         "created_at": datetime.utcnow().isoformat(),
     }
     return token
+
+
+def _absolute_url(request: Request, path_or_url: str | None) -> str | None:
+    if not path_or_url:
+        return None
+    if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
+        return path_or_url
+    return str(request.url_for("download_report", token=path_or_url.split("/")[-1]))
 
 
 def _build_patient_context(
@@ -252,6 +266,7 @@ async def generate_report(
     report["doctor_id"] = doctor_id
     report["patient_id"] = patient.get("id")
     report["doctor_name"] = patient.get("doctor_name")
+    report["report_id"] = str(uuid4())
     if patient.get("phone"):
         report["patient_phone"] = patient.get("phone")
     if patient.get("notes"):
@@ -269,10 +284,12 @@ async def generate_report(
     _purge_expired_pdfs()
     token = _cache_pdf(pdf_path)
     background_tasks.add_task(_cleanup_files, [audio_path])
+    report_record_id = None
 
     if patient:
         try:
-            create_report_record(report, patient, pdf_url=f"/report/download/{token}")
+            record = create_report_record(report, patient, pdf_url=f"/report/download/{token}")
+            report_record_id = record.get("id")
         except Exception:
             pass
 
@@ -280,6 +297,8 @@ async def generate_report(
         "filename": file.filename,
         "transcript": report.get("transcript", ""),
         "report": report,
+        "report_id": report.get("report_id"),
+        "report_record_id": report_record_id,
         "pdf_download_url": f"/report/download/{token}",
         "patient_id": patient.get("id"),
     }
@@ -297,3 +316,34 @@ async def download_report(token: str):
         media_type="application/pdf",
         filename="clinical_report.pdf"
     )
+
+
+@app.post("/reports/{report_id}/send-whatsapp")
+async def send_report_whatsapp(report_id: str, request: Request):
+    if not is_whatsapp_enabled():
+        raise HTTPException(status_code=503, detail="WhatsApp service is not configured.")
+
+    try:
+        report = get_report_record(report_id)
+    except DatabaseConfigError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    pdf_url = _absolute_url(request, report.get("pdf_url"))
+    if not pdf_url:
+        raise HTTPException(status_code=400, detail="Saved report does not have a PDF URL.")
+
+    try:
+        result = send_report_whatsapp_message(report, pdf_url)
+    except WhatsAppConfigError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to send WhatsApp message.") from exc
+
+    return {
+        "status": "sent",
+        "report_id": report_id,
+        "message_sid": result.get("message_sid"),
+        "to": result.get("to"),
+    }
