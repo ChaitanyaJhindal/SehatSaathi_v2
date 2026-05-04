@@ -10,7 +10,7 @@ import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function SignupScreen({ navigation }) {
-  const { login, logError, logInfo } = useAppContext();
+  const { login } = useAppContext();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -46,12 +46,10 @@ export default function SignupScreen({ navigation }) {
         organization_name: form.organizationName.trim() || null,
       });
       login(doctor);
-      logInfo("Doctor account created", doctor.email);
       navigation.replace("Dashboard");
     } catch (signupError) {
       const message = extractErrorMessage(signupError);
       setError(message);
-      logError("Doctor signup failed", signupError);
     } finally {
       setLoading(false);
     }

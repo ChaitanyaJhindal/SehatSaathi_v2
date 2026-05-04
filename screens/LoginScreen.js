@@ -10,7 +10,7 @@ import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function LoginScreen({ navigation }) {
-  const { login, logError, logInfo } = useAppContext();
+  const { login } = useAppContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -30,12 +30,10 @@ export default function LoginScreen({ navigation }) {
         password,
       });
       login(doctor);
-      logInfo("Doctor login successful", doctor.email);
       navigation.replace("Dashboard");
     } catch (loginError) {
       const message = extractErrorMessage(loginError);
       setError(message);
-      logError("Doctor login failed", loginError);
     } finally {
       setLoading(false);
     }

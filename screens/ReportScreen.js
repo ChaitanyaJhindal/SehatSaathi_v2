@@ -34,7 +34,6 @@ function toListItems(value) {
 }
 
 export default function ReportScreen({ route }) {
-  const { logError, logInfo } = useAppContext();
   const reportPayload = route.params?.reportPayload;
   const report = reportPayload?.report || {};
   const [sharing, setSharing] = useState(false);
@@ -65,10 +64,6 @@ export default function ReportScreen({ route }) {
   };
 
   const toggleEditing = () => {
-    if (editing) {
-      logInfo("Clinical report edited manually");
-    }
-
     setEditing((current) => !current);
   };
 
@@ -81,12 +76,10 @@ export default function ReportScreen({ route }) {
     const canOpen = await Linking.canOpenURL(reportPayload.pdfUrl);
 
     if (!canOpen) {
-      logError("PDF open check failed", "Linking cannot open the generated PDF URL.");
       Alert.alert("Cannot open PDF", "This device cannot open the PDF URL.");
       return;
     }
 
-    logInfo("Opening PDF URL", reportPayload.pdfUrl);
     await Linking.openURL(reportPayload.pdfUrl);
   };
 
@@ -99,14 +92,11 @@ export default function ReportScreen({ route }) {
     try {
       setSharing(true);
       if (reportPayload?.reportId) {
-        logInfo("Trying WhatsApp report delivery", reportPayload.reportId);
         await sendReportOnWhatsApp(reportPayload.reportId);
-        logInfo("WhatsApp report delivery completed", reportPayload.reportId);
         Alert.alert("Sent on WhatsApp", "The saved report link was sent to the patient's WhatsApp number.");
         return;
       }
 
-      logInfo("Started fallback PDF share flow", reportPayload.pdfUrl);
       const localUri = await downloadPdfToCache(reportPayload.pdfUrl);
       const canShare = await Sharing.isAvailableAsync();
 
@@ -119,8 +109,6 @@ export default function ReportScreen({ route }) {
         });
       }
     } catch (error) {
-      logError("WhatsApp share failed, falling back to native share", error);
-
       try {
         const localUri = await downloadPdfToCache(reportPayload.pdfUrl);
         const canShare = await Sharing.isAvailableAsync();
@@ -134,7 +122,6 @@ export default function ReportScreen({ route }) {
           });
         }
       } catch (fallbackError) {
-        logError("Share PDF fallback failed", fallbackError);
         Alert.alert("Share failed", fallbackError.message || "Unable to share the PDF.");
       }
     } finally {
