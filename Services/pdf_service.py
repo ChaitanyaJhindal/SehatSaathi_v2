@@ -1,4 +1,5 @@
 import unicodedata
+import re
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -32,7 +33,11 @@ def _text(value, fallback="--"):
     for source, target in replacements.items():
         value = value.replace(source, target)
 
-    return value
+    value = value.encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"[^\x20-\x7E]+", " ", value)
+    value = re.sub(r"\s+", " ", value).strip()
+
+    return value or fallback
 
 
 def _items(values):
