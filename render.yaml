@@ -2,7 +2,7 @@ services:
   - type: web
     name: sehatsaathi-api
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && npm install --prefix Services/wa_bridge
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: MONGODB_URI
@@ -12,4 +12,8 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: SARVAM_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PUBLIC_BASE_URL
         sync: false

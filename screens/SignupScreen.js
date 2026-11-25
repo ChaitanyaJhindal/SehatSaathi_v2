@@ -9,6 +9,8 @@ import { extractErrorMessage, signupDoctor } from "../Services/api";
 import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function SignupScreen({ navigation }) {
   const { login } = useAppContext();
   const [form, setForm] = useState({
@@ -31,7 +33,17 @@ export default function SignupScreen({ navigation }) {
     );
 
     if (hasEmptyField) {
-      setError("Please complete all signup fields.");
+      setError("Please complete all required signup fields.");
+      return;
+    }
+
+    if (!EMAIL_RE.test(form.email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
@@ -45,11 +57,13 @@ export default function SignupScreen({ navigation }) {
         specialization: form.specialization.trim(),
         organization_name: form.organizationName.trim() || null,
       });
-      login(doctor);
-      navigation.replace("Dashboard");
+      await login(doctor);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Dashboard" }],
+      });
     } catch (signupError) {
-      const message = extractErrorMessage(signupError);
-      setError(message);
+      setError(extractErrorMessage(signupError));
     } finally {
       setLoading(false);
     }
@@ -79,12 +93,13 @@ export default function SignupScreen({ navigation }) {
           onChangeText={(value) => updateField("email", value)}
           placeholder="doctor@hospital.com"
           keyboardType="email-address"
+          autoComplete="email"
         />
         <InputField
           label="Password"
           value={form.password}
           onChangeText={(value) => updateField("password", value)}
-          placeholder="Create a password"
+          placeholder="Create a password (min 6 chars)"
           secureTextEntry
         />
         <InputField
@@ -100,6 +115,8 @@ export default function SignupScreen({ navigation }) {
           onChangeText={(value) => updateField("organizationName", value)}
           placeholder="SehatSaathi Clinic"
           autoCapitalize="words"
+          returnKeyType="done"
+          onSubmitEditing={handleSignup}
         />
         {!!error && <Text style={styles.error}>{error}</Text>}
         <PrimaryButton title="Create Account" onPress={handleSignup} loading={loading} />

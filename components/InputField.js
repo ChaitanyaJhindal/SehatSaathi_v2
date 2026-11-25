@@ -11,6 +11,11 @@ export default function InputField({
   secureTextEntry = false,
   keyboardType = "default",
   autoCapitalize = "none",
+  returnKeyType,
+  onSubmitEditing,
+  multiline = false,
+  editable = true,
+  autoComplete,
 }) {
   return (
     <View style={styles.wrapper}>
@@ -23,7 +28,12 @@ export default function InputField({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
-        style={styles.input}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
+        multiline={multiline}
+        editable={editable}
+        autoComplete={autoComplete}
+        style={[styles.input, multiline && styles.multilineInput, !editable && styles.disabledInput]}
       />
     </View>
   );
@@ -49,5 +59,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: 14,
+  },
+  multilineInput: {
+    minHeight: 88,
+    textAlignVertical: "top",
+  },
+  disabledInput: {
+    backgroundColor: theme.colors.surfaceMuted,
+    opacity: 0.75,
   },
 });

@@ -1,5 +1,6 @@
-import React from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
@@ -21,37 +22,90 @@ function ActionCard({ title, subtitle, onPress }) {
   );
 }
 
+function isSameCalendarDay(isoOrText) {
+  if (!isoOrText) return false;
+  const parsed = new Date(isoOrText);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toDateString() === new Date().toDateString();
+}
+
 export default function DashboardScreen({ navigation }) {
-  const { user, reports, logout } = useAppContext();
+  const { user, reports, whatsappStatus, logout, refreshReports, refreshWhatsAppStatus } = useAppContext();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshReports();
+      refreshWhatsAppStatus();
+    }, [refreshReports, refreshWhatsAppStatus])
+  );
+
+  const todayCount = reports.filter((item) => isSameCalendarDay(item.createdAtIso || item.createdAt)).length;
+  const waConnected = Boolean(whatsappStatus?.connected);
+  const waOffline = whatsappStatus?.status === "service_error" || whatsappStatus?.status === "gateway_offline";
+
+  const handleLogout = async () => {
+    await logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+  };
 
   return (
     <ScreenContainer>
       <View style={styles.heroCard}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
-            <Text style={styles.greeting}>Clinical Workspace</Text>
+            <Text style={styles.greeting}>{user?.organization_name || "Clinical Workspace"}</Text>
             <Text style={styles.name}>{user?.name || "Doctor"}</Text>
             <Text style={styles.specialization}>{user?.specialization || "Healthcare Professional"}</Text>
           </View>
-          <PrimaryButton title="Logout" variant="secondary" onPress={() => {
-            logout();
-            navigation.replace("Login");
-          }} />
+          <PrimaryButton title="Logout" variant="secondary" onPress={handleLogout} />
         </View>
 
         <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Today</Text>
-            <Text style={styles.metricValue}>{reports.length}</Text>
-            <Text style={styles.metricHelp}>Reports generated</Text>
+            <Text style={styles.metricValue}>{todayCount}</Text>
+            <Text style={styles.metricHelp}>Reports today</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Mode</Text>
-            <Text style={styles.metricValue}>Live</Text>
-            <Text style={styles.metricHelp}>Voice-first workflow</Text>
+            <Text style={styles.metricLabel}>Saved</Text>
+            <Text style={styles.metricValue}>{reports.length}</Text>
+            <Text style={styles.metricHelp}>Total clinical reports</Text>
           </View>
         </View>
       </View>
+
+      <SectionCard title="WhatsApp Delivery">
+        <View style={styles.waRow}>
+          <View
+            style={[
+              styles.waDot,
+              waConnected ? styles.waDotOnline : waOffline ? styles.waDotOffline : styles.waDotPending,
+            ]}
+          />
+          <View style={styles.waCopy}>
+            <Text style={styles.waTitle}>
+              {waConnected
+                ? `Connected (${whatsappStatus?.push_name || whatsappStatus?.phone || "Ready"})`
+                : waOffline
+                  ? "WhatsApp service unavailable"
+                  : "WhatsApp not linked"}
+            </Text>
+            <Text style={styles.waSubtitle}>
+              {waConnected
+                ? "Patient PDF reports can be sent straight to their WhatsApp."
+                : "Scan a WhatsApp Web QR code once to enable instant PDF sharing."}
+            </Text>
+          </View>
+        </View>
+        <PrimaryButton
+          title={waConnected ? "Manage WhatsApp" : "Connect WhatsApp (Scan QR)"}
+          variant={waConnected ? "secondary" : "primary"}
+          onPress={() => navigation.navigate("WhatsAppConnect")}
+        />
+      </SectionCard>
 
       <SectionCard title="Start Consultation">
         <ActionCard
@@ -72,24 +126,27 @@ export default function DashboardScreen({ navigation }) {
             No reports yet. Your generated consultation summaries will appear here.
           </Text>
         ) : (
-          <FlatList
-            data={reports.slice(0, 5)}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: theme.spacing.sm }} />}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => navigation.navigate("Report", { reportPayload: item })}
-                style={styles.reportRow}
-              >
-                <View style={styles.reportMeta}>
-                  <Text style={styles.reportTitle}>{item.filename || "Consultation Report"}</Text>
-                  <Text style={styles.reportSubtext}>{item.createdAt}</Text>
-                </View>
-                <Text style={styles.reportAction}>Open</Text>
-              </Pressable>
-            )}
-          />
+          <View style={styles.reportList}>
+            {reports.slice(0, 10).map((item) => {
+              const title = item.patientName
+                ? `${item.patientName}${item.report?.diagnosis ? ` — ${item.report.diagnosis}` : ""}`
+                : item.filename || "Consultation Report";
+
+              return (
+                <Pressable
+                  key={item.reportId || item.id}
+                  onPress={() => navigation.navigate("Report", { reportPayload: item })}
+                  style={styles.reportRow}
+                >
+                  <View style={styles.reportMeta}>
+                    <Text style={styles.reportTitle}>{title}</Text>
+                    <Text style={styles.reportSubtext}>{item.createdAt}</Text>
+                  </View>
+                  <Text style={styles.reportAction}>Open</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         )}
       </SectionCard>
     </ScreenContainer>
@@ -115,7 +172,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
   },
   headerCopy: {
     flex: 1,
@@ -130,7 +186,7 @@ const styles = StyleSheet.create({
   },
   name: {
     color: theme.colors.text,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "800",
   },
   specialization: {
@@ -165,6 +221,40 @@ const styles = StyleSheet.create({
   metricHelp: {
     color: theme.colors.subtext,
     fontSize: 13,
+  },
+  waRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  waDot: {
+    width: 12,
+    height: 12,
+    borderRadius: theme.radius.pill,
+  },
+  waDotOnline: {
+    backgroundColor: theme.colors.success,
+  },
+  waDotPending: {
+    backgroundColor: "#D97706",
+  },
+  waDotOffline: {
+    backgroundColor: theme.colors.danger,
+  },
+  waCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  waTitle: {
+    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  waSubtitle: {
+    color: theme.colors.subtext,
+    fontSize: 13,
+    lineHeight: 19,
   },
   actionCard: {
     backgroundColor: theme.colors.surface,
@@ -207,6 +297,9 @@ const styles = StyleSheet.create({
     color: theme.colors.subtext,
     lineHeight: 22,
   },
+  reportList: {
+    gap: theme.spacing.sm,
+  },
   reportRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -216,6 +309,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
   },
   reportMeta: {
     flex: 1,

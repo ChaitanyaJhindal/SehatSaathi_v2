@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
+import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
 import { useAppContext } from "../context/AppContext";
@@ -10,18 +11,19 @@ import { theme } from "../theme";
 export default function ProcessingScreen({ navigation, route }) {
   const { addReport, user } = useAppContext();
   const [error, setError] = useState("");
-  const hasStartedRef = useRef(false);
+  const [runNonce, setRunNonce] = useState(0);
   const audioAsset = route.params?.audioAsset;
   const patientDetails = route.params?.patientDetails || {};
   const sourceLabel = route.params?.sourceLabel || "Consultation audio";
 
   useEffect(() => {
-    if (hasStartedRef.current) {
+    if (!audioAsset) {
+      setError("No audio file was provided. Please go back and record or select an audio file.");
       return undefined;
     }
 
-    hasStartedRef.current = true;
     let cancelled = false;
+    setError("");
 
     const run = async () => {
       try {
@@ -31,19 +33,28 @@ export default function ProcessingScreen({ navigation, route }) {
           return;
         }
 
+        const ageVal =
+          payload.report?.patient_age ??
+          payload.report?.age ??
+          (patientDetails.age !== "" ? patientDetails.age : null);
+
         const reportPayload = {
-          id: `${Date.now()}`,
-          filename: payload.filename,
-          transcript: payload.transcript,
-          report: payload.report,
+          id: payload.report_id || payload.report?.report_id || `${Date.now()}`,
+          filename: payload.filename || sourceLabel,
+          transcript: payload.transcript || "",
+          report: payload.report || {},
           pdfUrl: payload.pdf_url,
           reportId: payload.report_id || payload.report?.report_id,
           reportRecordId: payload.report_record_id,
           patientId: payload.patient_id || payload.report?.patient_id,
           patientName: payload.report?.patient_name || patientDetails.name,
-          patientAge: payload.report?.age || patientDetails.age,
-          patientGender: payload.report?.gender || patientDetails.gender,
-          patientPhone: payload.report?.patient_phone || patientDetails.phone,
+          patientAge: ageVal,
+          patientGender: payload.report?.patient_gender ?? payload.report?.gender ?? patientDetails.gender,
+          patientPhone:
+            payload.report?.patient_phone ?? payload.report?.patient_mobile ?? patientDetails.phone,
+          patientNotes: payload.report?.patient_notes ?? patientDetails.notes,
+          doctorName: payload.report?.doctor_name || user?.name,
+          createdAtIso: new Date().toISOString(),
           createdAt: new Date().toLocaleString(),
         };
 
@@ -61,27 +72,50 @@ export default function ProcessingScreen({ navigation, route }) {
     return () => {
       cancelled = true;
     };
-  }, [addReport, audioAsset, navigation, patientDetails, sourceLabel, user]);
+  }, [runNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleGoBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.replace("Dashboard");
+    }
+  };
 
   return (
     <ScreenContainer scroll={false}>
       <View style={styles.wrapper}>
-        <SectionCard title="Generating report">
-          <View style={styles.loaderWrap}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-          <View style={styles.progressLine}>
-            <View style={styles.progressFill} />
-          </View>
-          <Text style={styles.title}>Generating report...</Text>
-          <Text style={styles.subtitle}>
-            We are uploading {sourceLabel}, transcribing the consultation, and preparing the PDF.
-          </Text>
-          {!!error && <Text style={styles.error}>{error}</Text>}
-          {!!error && (
-            <Text style={styles.retry} onPress={() => navigation.goBack()}>
-              Go back and try again
-            </Text>
+        <SectionCard title={error ? "Report Generation Failed" : "Generating Report"}>
+          {!error ? (
+            <>
+              <View style={styles.loaderWrap}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              </View>
+              <View style={styles.progressLine}>
+                <View style={styles.progressFill} />
+              </View>
+              <Text style={styles.title}>Generating report...</Text>
+              <Text style={styles.subtitle}>
+                Uploading {sourceLabel}, transcribing the consultation, extracting clinical fields, and building the PDF.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.error}>{error}</Text>
+              <View style={styles.buttonStack}>
+                {!!audioAsset && (
+                  <PrimaryButton
+                    title="Retry"
+                    onPress={() => setRunNonce((n) => n + 1)}
+                  />
+                )}
+                <PrimaryButton
+                  title="Back to Form"
+                  variant="secondary"
+                  onPress={handleGoBack}
+                />
+              </View>
+            </>
           )}
         </SectionCard>
       </View>
@@ -113,7 +147,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   progressFill: {
-    width: "62%",
+    width: "68%",
     height: "100%",
     backgroundColor: theme.colors.primary,
   },
@@ -131,16 +165,13 @@ const styles = StyleSheet.create({
   },
   error: {
     color: theme.colors.danger,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: theme.spacing.sm,
+    marginVertical: theme.spacing.sm,
   },
-  retry: {
-    color: theme.colors.primary,
-    fontSize: 15,
-    fontWeight: "700",
-    textAlign: "center",
+  buttonStack: {
+    gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
 });

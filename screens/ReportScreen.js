@@ -1,13 +1,20 @@
-import React, { useState } from "react";
-import { Alert, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import * as Linking from "expo-linking";
 import * as Sharing from "expo-sharing";
 
+import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
 import { useAppContext } from "../context/AppContext";
-import { downloadPdfToCache, sendReportOnWhatsApp } from "../Services/api";
+import {
+  downloadPdfToCache,
+  extractErrorMessage,
+  sendReportOnWhatsApp,
+  updateReport,
+} from "../Services/api";
+import { notify } from "../Services/notify";
 import { theme } from "../theme";
 
 function BulletList({ items }) {
@@ -23,29 +30,68 @@ function BulletList({ items }) {
 }
 
 function toEditableList(items) {
-  return Array.isArray(items) ? items.join("\n") : "";
+  if (Array.isArray(items)) {
+    return items.filter(Boolean).join("\n");
+  }
+  if (typeof items === "string") {
+    return items.trim();
+  }
+  return "";
 }
 
 function toListItems(value) {
-  return value
+  return String(value || "")
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
-export default function ReportScreen({ route }) {
+function buildEditableState(payload) {
+  const rep = payload?.report || {};
+  return {
+    symptoms: toEditableList(rep.symptoms),
+    diagnosis: rep.diagnosis || "",
+    medications: toEditableList(rep.medications),
+    dosage: toEditableList(rep.dosage),
+    precautions: toEditableList(rep.precautions),
+    follow_up: rep.follow_up || "",
+    doctor_notes: rep.doctor_notes || "",
+    patient_notes: payload?.patientNotes ?? rep.patient_notes ?? "",
+  };
+}
+
+export default function ReportScreen({ navigation, route }) {
+  const { updateReportEntry } = useAppContext();
   const reportPayload = route.params?.reportPayload;
   const report = reportPayload?.report || {};
+  const targetReportId = reportPayload?.reportId || reportPayload?.reportRecordId || reportPayload?.id;
+
   const [sharing, setSharing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editableReport, setEditableReport] = useState(() => ({
-    symptoms: toEditableList(report.symptoms),
-    diagnosis: report.diagnosis || "",
-    medications: toEditableList(report.medications),
-    dosage: toEditableList(report.dosage),
-    precautions: toEditableList(report.precautions),
-    doctor_notes: report.doctor_notes || "",
-  }));
+  const [pdfUrl, setPdfUrl] = useState(reportPayload?.pdfUrl || null);
+  const [recipientPhone, setRecipientPhone] = useState(
+    reportPayload?.patientPhone || report.patient_phone || report.patient_mobile || ""
+  );
+  const [editableReport, setEditableReport] = useState(() => buildEditableState(reportPayload));
+  const [statusMessage, setStatusMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [needsWhatsAppLink, setNeedsWhatsAppLink] = useState(false);
+
+  useEffect(() => {
+    setEditableReport(buildEditableState(reportPayload));
+    setPdfUrl(reportPayload?.pdfUrl || null);
+    setRecipientPhone(
+      reportPayload?.patientPhone ||
+        reportPayload?.report?.patient_phone ||
+        reportPayload?.report?.patient_mobile ||
+        ""
+    );
+    setEditing(false);
+    setStatusMessage("");
+    setErrorMessage("");
+    setNeedsWhatsAppLink(false);
+  }, [reportPayload]);
 
   const displayReport = {
     symptoms: toListItems(editableReport.symptoms),
@@ -53,7 +99,9 @@ export default function ReportScreen({ route }) {
     medications: toListItems(editableReport.medications),
     dosage: toListItems(editableReport.dosage),
     precautions: toListItems(editableReport.precautions),
+    follow_up: editableReport.follow_up.trim(),
     doctor_notes: editableReport.doctor_notes.trim(),
+    patient_notes: editableReport.patient_notes.trim(),
   };
 
   const updateField = (field, value) => {
@@ -63,71 +111,151 @@ export default function ReportScreen({ route }) {
     }));
   };
 
-  const toggleEditing = () => {
-    setEditing((current) => !current);
+  const handleToggleOrSave = async () => {
+    if (!editing) {
+      setErrorMessage("");
+      setStatusMessage("");
+      setEditing(true);
+      return;
+    }
+
+    const updatedPayload = {
+      symptoms: displayReport.symptoms,
+      diagnosis: displayReport.diagnosis,
+      medications: displayReport.medications,
+      dosage: displayReport.dosage,
+      precautions: displayReport.precautions,
+      follow_up: displayReport.follow_up,
+      doctor_notes: displayReport.doctor_notes,
+      patient_notes: displayReport.patient_notes,
+    };
+
+    if (!targetReportId) {
+      setEditing(false);
+      setStatusMessage("Changes updated locally.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setErrorMessage("");
+      setStatusMessage("");
+      const saved = await updateReport(targetReportId, updatedPayload);
+      const refreshedPdf = saved.pdf_url
+        ? `${saved.pdf_url}${saved.pdf_url.includes("?") ? "&" : "?"}t=${Date.now()}`
+        : pdfUrl;
+      if (refreshedPdf) {
+        setPdfUrl(refreshedPdf);
+      }
+      updateReportEntry(targetReportId, {
+        report: saved.report || { ...report, ...updatedPayload },
+        pdfUrl: refreshedPdf || pdfUrl,
+        patientNotes: displayReport.patient_notes,
+      });
+      setEditing(false);
+      setStatusMessage("Changes saved to database and PDF regenerated.");
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      setErrorMessage(msg);
+      notify("Save failed", msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleViewPdf = async () => {
-    if (!reportPayload?.pdfUrl) {
-      Alert.alert("PDF unavailable", "No PDF URL was returned by the backend.");
+    if (!pdfUrl) {
+      const msg = "No PDF URL is available for this report.";
+      setErrorMessage(msg);
+      notify("PDF unavailable", msg);
       return;
     }
 
-    const canOpen = await Linking.canOpenURL(reportPayload.pdfUrl);
+    if (Platform.OS === "web") {
+      window.open(pdfUrl, "_blank");
+      return;
+    }
 
+    const canOpen = await Linking.canOpenURL(pdfUrl);
     if (!canOpen) {
-      Alert.alert("Cannot open PDF", "This device cannot open the PDF URL.");
+      notify("Cannot open PDF", "This device cannot open the PDF URL.");
       return;
     }
-
-    await Linking.openURL(reportPayload.pdfUrl);
+    await Linking.openURL(pdfUrl);
   };
 
-  const handleSharePdf = async () => {
-    if (!reportPayload?.pdfUrl) {
-      Alert.alert("PDF unavailable", "No PDF URL was returned by the backend.");
+  const handleDownloadPdf = async () => {
+    if (!pdfUrl) {
+      const msg = "No PDF URL is available for this report.";
+      setErrorMessage(msg);
+      notify("PDF unavailable", msg);
+      return;
+    }
+
+    const downloadUrl = pdfUrl.includes("?") ? `${pdfUrl}&download=1` : `${pdfUrl}?download=1`;
+
+    if (Platform.OS === "web") {
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `clinical_report_${reportPayload?.patientName || "patient"}.pdf`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    try {
+      const localUri = await downloadPdfToCache(downloadUrl);
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(localUri);
+      } else {
+        notify("PDF Downloaded", `Saved to: ${localUri}`);
+      }
+    } catch (err) {
+      const msg = err?.message || "Failed to download PDF.";
+      setErrorMessage(msg);
+      notify("Download Error", msg);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!targetReportId) {
+      setErrorMessage("Report must be saved before sending on WhatsApp.");
+      return;
+    }
+
+    if (!recipientPhone.trim()) {
+      setErrorMessage("Please enter the patient's WhatsApp phone number.");
       return;
     }
 
     try {
       setSharing(true);
-      if (reportPayload?.reportId) {
-        await sendReportOnWhatsApp(reportPayload.reportId);
-        Alert.alert("Sent on WhatsApp", "The saved report link was sent to the patient's WhatsApp number.");
-        return;
-      }
+      setErrorMessage("");
+      setStatusMessage("");
+      setNeedsWhatsAppLink(false);
 
-      const localUri = await downloadPdfToCache(reportPayload.pdfUrl);
-      const canShare = await Sharing.isAvailableAsync();
-
-      if (canShare) {
-        await Sharing.shareAsync(localUri);
-      } else {
-        await Share.share({
-          message: reportPayload.pdfUrl,
-          url: reportPayload.pdfUrl,
-        });
+      const res = await sendReportOnWhatsApp(targetReportId, recipientPhone.trim());
+      const msg = `Report PDF sent on WhatsApp to ${res.to || recipientPhone.trim()}.`;
+      setStatusMessage(msg);
+      notify("Sent on WhatsApp", msg);
+    } catch (err) {
+      const status = err?.response?.status;
+      const msg = extractErrorMessage(err);
+      setErrorMessage(msg);
+      if (status === 409 || status === 503) {
+        setNeedsWhatsAppLink(true);
       }
-    } catch (error) {
-      try {
-        const localUri = await downloadPdfToCache(reportPayload.pdfUrl);
-        const canShare = await Sharing.isAvailableAsync();
-
-        if (canShare) {
-          await Sharing.shareAsync(localUri);
-        } else {
-          await Share.share({
-            message: reportPayload.pdfUrl,
-            url: reportPayload.pdfUrl,
-          });
-        }
-      } catch (fallbackError) {
-        Alert.alert("Share failed", fallbackError.message || "Unable to share the PDF.");
-      }
+      notify("WhatsApp Send Failed", msg);
     } finally {
       setSharing(false);
     }
   };
+
+  const ageDisplay = reportPayload?.patientAge ?? report.patient_age ?? report.age;
+  const genderDisplay = reportPayload?.patientGender || report.patient_gender || report.gender || "N/A";
 
   return (
     <ScreenContainer>
@@ -139,20 +267,31 @@ export default function ReportScreen({ route }) {
             <Text style={styles.summaryMeta}>
               {reportPayload?.patientName || report.patient_name || "Unnamed patient"}
               {" | "}
-              {reportPayload?.patientAge || report.age || "N/A"}
+              {ageDisplay !== null && ageDisplay !== undefined && ageDisplay !== "" ? ageDisplay : "N/A"}
               {" | "}
-              {reportPayload?.patientGender || report.gender || "N/A"}
+              {genderDisplay}
             </Text>
           </View>
           <View style={styles.summaryStatus}>
             <Text style={styles.summaryStatusText}>{editing ? "Editing" : "Ready"}</Text>
           </View>
         </View>
+        {!!statusMessage && <Text style={styles.successText}>{statusMessage}</Text>}
+        {!!errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+        {needsWhatsAppLink && (
+          <View style={styles.linkAction}>
+            <PrimaryButton
+              title="Open WhatsApp QR Login"
+              onPress={() => navigation.navigate("WhatsAppConnect")}
+            />
+          </View>
+        )}
         <View style={styles.summaryActions}>
           <PrimaryButton
             title={editing ? "Save Changes" : "Edit Report"}
             variant="secondary"
-            onPress={toggleEditing}
+            onPress={handleToggleOrSave}
+            loading={saving}
           />
         </View>
       </SectionCard>
@@ -237,6 +376,22 @@ export default function ReportScreen({ route }) {
         )}
       </SectionCard>
 
+      <SectionCard title="Follow-Up">
+        {editing ? (
+          <TextInput
+            value={editableReport.follow_up}
+            onChangeText={(value) => updateField("follow_up", value)}
+            multiline
+            textAlignVertical="top"
+            placeholder="Enter follow-up instructions"
+            placeholderTextColor={theme.colors.subtext}
+            style={[styles.input, styles.multilineInput]}
+          />
+        ) : (
+          <Text style={styles.bodyText}>{displayReport.follow_up || "No follow-up specified."}</Text>
+        )}
+      </SectionCard>
+
       <SectionCard title="Doctor Notes">
         {editing ? (
           <TextInput
@@ -253,19 +408,50 @@ export default function ReportScreen({ route }) {
         )}
       </SectionCard>
 
+      {(editing || !!displayReport.patient_notes) && (
+        <SectionCard title="Patient Notes" subtle>
+          {editing ? (
+            <TextInput
+              value={editableReport.patient_notes}
+              onChangeText={(value) => updateField("patient_notes", value)}
+              multiline
+              textAlignVertical="top"
+              placeholder="Patient history / notes"
+              placeholderTextColor={theme.colors.subtext}
+              style={[styles.input, styles.multilineInput]}
+            />
+          ) : (
+            <Text style={styles.bodyText}>{displayReport.patient_notes}</Text>
+          )}
+        </SectionCard>
+      )}
+
       <SectionCard title="Transcript" subtle>
         <Text style={styles.bodyText}>{reportPayload?.transcript || "Transcript not provided."}</Text>
       </SectionCard>
 
-      <View style={styles.buttonStack}>
-        <PrimaryButton title="View PDF" onPress={handleViewPdf} />
-        <PrimaryButton
-          title="Share PDF"
-          variant="secondary"
-          onPress={handleSharePdf}
-          loading={sharing}
+      <SectionCard title="Share & Export">
+        <InputField
+          label="Patient WhatsApp Number"
+          value={recipientPhone}
+          onChangeText={setRecipientPhone}
+          placeholder="+91 98xxxxxx12"
+          keyboardType="phone-pad"
         />
-      </View>
+        <View style={styles.buttonStack}>
+          <PrimaryButton
+            title="Send PDF on WhatsApp"
+            onPress={handleSendWhatsApp}
+            loading={sharing}
+          />
+          <PrimaryButton title="View PDF" variant="secondary" onPress={handleViewPdf} />
+          <PrimaryButton
+            title="Download PDF"
+            variant="secondary"
+            onPress={handleDownloadPdf}
+          />
+        </View>
+      </SectionCard>
     </ScreenContainer>
   );
 }
@@ -304,7 +490,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   summaryActions: {
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+  },
+  linkAction: {
+    marginTop: theme.spacing.xs,
+  },
+  successText: {
+    color: "#166534",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: theme.spacing.xs,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: theme.spacing.xs,
   },
   bodyText: {
     color: theme.colors.text,
@@ -336,7 +537,6 @@ const styles = StyleSheet.create({
   },
   buttonStack: {
     gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    marginTop: theme.spacing.xs,
   },
 });

@@ -13,11 +13,17 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SehatSaathi needs microphone access to record doctor-patient consultations."
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "package": "com.chaitanyajhindal.sehatsaathi"
+      "package": "com.chaitanyajhindal.sehatsaathi",
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-document-picker",

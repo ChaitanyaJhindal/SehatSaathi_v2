@@ -13,6 +13,7 @@ import RecordScreen from "./screens/RecordScreen";
 import UploadScreen from "./screens/UploadScreen";
 import ProcessingScreen from "./screens/ProcessingScreen";
 import ReportScreen from "./screens/ReportScreen";
+import WhatsAppConnectScreen from "./screens/WhatsAppConnectScreen";
 import { theme } from "./theme";
 
 const Stack = createNativeStackNavigator();
@@ -52,6 +53,7 @@ export default function App() {
           <Stack.Screen name="Upload" component={UploadScreen} options={{ title: "Upload Audio" }} />
           <Stack.Screen name="Processing" component={ProcessingScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Report" component={ReportScreen} options={{ title: "Clinical Report" }} />
+          <Stack.Screen name="WhatsAppConnect" component={WhatsAppConnectScreen} options={{ title: "Connect WhatsApp" }} />
         </Stack.Navigator>
       </NavigationContainer>
     </AppProvider>

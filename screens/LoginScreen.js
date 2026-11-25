@@ -5,9 +5,11 @@ import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
-import { loginDoctor, extractErrorMessage } from "../Services/api";
+import { extractErrorMessage, loginDoctor } from "../Services/api";
 import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAppContext();
@@ -17,8 +19,13 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password.trim()) {
       setError("Please enter both email and password.");
+      return;
+    }
+    if (!EMAIL_RE.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -26,14 +33,16 @@ export default function LoginScreen({ navigation }) {
       setLoading(true);
       setError("");
       const doctor = await loginDoctor({
-        email: email.trim(),
+        email: trimmedEmail,
         password,
       });
-      login(doctor);
-      navigation.replace("Dashboard");
+      await login(doctor);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Dashboard" }],
+      });
     } catch (loginError) {
-      const message = extractErrorMessage(loginError);
-      setError(message);
+      setError(extractErrorMessage(loginError));
     } finally {
       setLoading(false);
     }
@@ -52,7 +61,7 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
         <Text style={styles.subtitle}>
-          Sign in to record consultations, generate reports, and share PDFs in minutes.
+          Sign in to record consultations, generate reports, and share PDFs via WhatsApp.
         </Text>
       </View>
 
@@ -63,6 +72,8 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setEmail}
           placeholder="doctor@hospital.com"
           keyboardType="email-address"
+          autoComplete="email"
+          returnKeyType="next"
         />
         <InputField
           label="Password"
@@ -70,6 +81,8 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setPassword}
           placeholder="Enter password"
           secureTextEntry
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
         />
         {!!error && <Text style={styles.error}>{error}</Text>}
         <PrimaryButton title="Login" onPress={handleLogin} loading={loading} />

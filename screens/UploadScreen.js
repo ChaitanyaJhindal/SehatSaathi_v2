@@ -1,16 +1,17 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 
+import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 import ScreenContainer from "../components/ScreenContainer";
 import SectionCard from "../components/SectionCard";
-import InputField from "../components/InputField";
-import { useAppContext } from "../context/AppContext";
+import { notify } from "../Services/notify";
 import { theme } from "../theme";
 
 export default function UploadScreen({ navigation }) {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [error, setError] = useState("");
   const [patientDetails, setPatientDetails] = useState({
     name: "",
     age: "",
@@ -28,6 +29,7 @@ export default function UploadScreen({ navigation }) {
 
   const handlePickFile = async () => {
     try {
+      setError("");
       const result = await DocumentPicker.getDocumentAsync({
         type: ["audio/*"],
         copyToCacheDirectory: true,
@@ -38,23 +40,41 @@ export default function UploadScreen({ navigation }) {
       }
 
       setSelectedFile(result.assets[0]);
-    } catch (error) {
-      Alert.alert("Upload failed", error.message || "Unable to open the document picker.");
+    } catch (err) {
+      const msg = err?.message || "Unable to open the document picker.";
+      setError(msg);
+      notify("Upload failed", msg);
     }
   };
 
   const handleGenerate = () => {
     if (!selectedFile) {
-      Alert.alert("No file selected", "Please choose an audio file first.");
+      const msg = "Please choose an audio file first.";
+      setError(msg);
+      notify("No file selected", msg);
       return;
     }
 
     if (!patientDetails.name.trim()) {
-      Alert.alert("Patient name required", "Please add the patient name before generating the report.");
+      const msg = "Please add the patient name before generating the report.";
+      setError(msg);
+      notify("Patient name required", msg);
       return;
     }
 
-    navigation.replace("Processing", {
+    const rawAge = patientDetails.age.trim();
+    if (rawAge) {
+      const parsedAge = Number(rawAge);
+      if (!Number.isInteger(parsedAge) || parsedAge < 0 || parsedAge > 150) {
+        const msg = "Patient age must be a whole number between 0 and 150.";
+        setError(msg);
+        notify("Invalid age", msg);
+        return;
+      }
+    }
+
+    setError("");
+    navigation.navigate("Processing", {
       audioAsset: selectedFile,
       patientDetails,
       sourceLabel: selectedFile.name || "Uploaded audio",
@@ -71,7 +91,7 @@ export default function UploadScreen({ navigation }) {
 
           <View style={styles.formStack}>
             <InputField
-              label="Patient Name"
+              label="Patient Name *"
               value={patientDetails.name}
               onChangeText={(value) => updatePatientField("name", value)}
               placeholder="Rohan Verma"
@@ -92,7 +112,7 @@ export default function UploadScreen({ navigation }) {
               autoCapitalize="words"
             />
             <InputField
-              label="Phone"
+              label="Phone (WhatsApp)"
               value={patientDetails.phone}
               onChangeText={(value) => updatePatientField("phone", value)}
               placeholder="+91 98xxxxxx12"
@@ -111,9 +131,11 @@ export default function UploadScreen({ navigation }) {
             <Text style={styles.fileLabel}>Selected File</Text>
             <Text style={styles.fileName}>{selectedFile?.name || "No file selected yet"}</Text>
             <Text style={styles.fileSubtext}>
-              {selectedFile?.mimeType || "Supported formats: m4a, mp3, wav"}
+              {selectedFile?.mimeType || "Supported formats: m4a, mp3, wav, webm, ogg"}
             </Text>
           </View>
+
+          {!!error && <Text style={styles.error}>{error}</Text>}
 
           <View style={styles.buttonStack}>
             <PrimaryButton title="Choose Audio File" onPress={handlePickFile} />
@@ -162,6 +184,12 @@ const styles = StyleSheet.create({
   fileSubtext: {
     color: theme.colors.subtext,
     fontSize: 13,
+  },
+  error: {
+    color: theme.colors.danger,
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: theme.spacing.xs,
   },
   buttonStack: {
     marginTop: theme.spacing.md,

@@ -2,16 +2,26 @@ import React, { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import ScreenContainer from "../components/ScreenContainer";
+import { useAppContext } from "../context/AppContext";
 import { theme } from "../theme";
 
 export default function SplashScreen({ navigation }) {
+  const { hydrated, user } = useAppContext();
+
   useEffect(() => {
+    if (!hydrated) {
+      return undefined;
+    }
+
     const timer = setTimeout(() => {
-      navigation.replace("Login");
-    }, 1800);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: user ? "Dashboard" : "Login" }],
+      });
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [hydrated, navigation, user]);
 
   return (
     <ScreenContainer scroll={false}>
